@@ -1,0 +1,62 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: match - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\WINDOWS\TEMP\RSPA322.TMP" with contents
+[
+/nologo /ML /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Release/match.pch" /YX /Fo"Release/" /Fd"Release/" /FD /I../maxflow /I../energy /c 
+"D:\match-v3.02.src\code\bvz.cpp"
+"D:\match-v3.02.src\code\corr.cpp"
+"D:\match-v3.02.src\code\data.cpp"
+"D:\match-v3.02.src\maxflow\graph.cpp"
+"D:\match-v3.02.src\code\image.cpp"
+"D:\match-v3.02.src\code\kz1.cpp"
+"D:\match-v3.02.src\code\kz2.cpp"
+"D:\match-v3.02.src\code\main.cpp"
+"D:\match-v3.02.src\code\match.cpp"
+"D:\match-v3.02.src\maxflow\maxflow.cpp"
+"D:\match-v3.02.src\code\statistics.cpp"
+]
+Creating command line "cl.exe @C:\WINDOWS\TEMP\RSPA322.TMP" 
+Creating temporary file "C:\WINDOWS\TEMP\RSPA323.TMP" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/match.pdb" /machine:I386 /out:"..\bin\match.exe" 
+".\Release\bvz.obj"
+".\Release\corr.obj"
+".\Release\data.obj"
+".\Release\graph.obj"
+".\Release\image.obj"
+".\Release\kz1.obj"
+".\Release\kz2.obj"
+".\Release\main.obj"
+".\Release\match.obj"
+".\Release\maxflow.obj"
+".\Release\statistics.obj"
+]
+Creating command line "link.exe @C:\WINDOWS\TEMP\RSPA323.TMP"
+<h3>Output Window</h3>
+Compiling...
+bvz.cpp
+corr.cpp
+data.cpp
+graph.cpp
+image.cpp
+kz1.cpp
+kz2.cpp
+main.cpp
+match.cpp
+maxflow.cpp
+statistics.cpp
+Linking...
+
+
+
+<h3>Results</h3>
+match.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

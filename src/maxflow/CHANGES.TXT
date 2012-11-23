@@ -1,0 +1,13 @@
+List of changes from version 2.01:
+
+- Added new interface function - Graph::add_tweights(Node_id, captype, captype)
+  (necessary for the "ENERGY" software package)
+
+List of changes from version 2.02:
+
+- Fixed a bug in the implementation that uses forward star representation
+
+List of changes from version 2.1:
+
+- Put the code under GPL license
+

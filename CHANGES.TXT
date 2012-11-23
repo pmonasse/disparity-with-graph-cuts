@@ -1,0 +1,49 @@
+List of changes from version 2.02 to 3.01:
+
+- Added new algorithm - KZ1
+- Renamed algorithm KZ to KZ2
+- Added a heuristic for automatically choosing parameters for KZ1 and KZ2
+- Parameters lambdaX and K can now be set to fractions (e.g. 1/2)
+- Removed two parameters KZ.occlusion_penalty and KZ.penalty_0;
+  introduced a new parameter KZ2.K instead which is equivalent to
+  2*KZ.occlusion_penalty + KZ.penalty_0
+- Added new variable 'sub_pixel' for switching on and off data term described in
+	Stan Birchfield and Carlo Tomasi
+	"A pixel dissimilarity measure that is insensitive to image sampling"
+	PAMI 20(4):401-406, April 98
+- Added new variable 'data_cost' for choosing method of computing data cost (L1 or L2)
+- Added new method 'FILL_OCCLUSIONS'
+- Tweaked static clues (i.e. dependency of smoothness penalty on the images) for
+  the case of color images
+
+List of changes from version 3.01 to 3.1:
+
+- Fixed bug in KZ1 algorithm (when disparity range included negated values,
+  e.g. (-1,0) and (1,0), the method worked incorrectly)
+- Fixed bug with segmentation images used for static clues
+  (earlier it was not possible to use grayscale input images and
+  color segmentation images, or vice versa)
+- Renamed parameters in configuration file:
+    ALG.parameter -> parameter
+  where ALG is one of KZ1, KZ2, BVZ, CORR
+- Rewrote KZ1, KZ2, BVZ algorithms to use 'ENERGY' software package
+  from http://www.cs.cornell.edu/People/vnk/software.html
+
+List of changes from version 3.1 to 3.2:
+
+- Renamed configurations files from *.cnf to *.txt
+- Included version 2.2 of maxflow algorithm with GPL license
+
+List of changes from version 3.2 to 3.3:
+
+- Fixed bug that sometimes caused the program to crash 
+  (procedure for selecting random ordering of labels)
+- Added the possibility of using truncated linear smoothness penalty instead of Potts
+
+List of changes from version 3.3 to version 3.4:
+
+- Fixed a bug in statistics.cpp (function for computing parameter K).
+  In the previous version the summation was over an incorrect range:
+	p.x<=p_max.y
+  Changed to
+	p.x<=p_max.x

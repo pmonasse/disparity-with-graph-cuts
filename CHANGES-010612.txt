@@ -1,0 +1,3 @@
+* corrections de P. Monasse (MAJ 23.05.2012)
+* vérification des énergies (MAJ 01.06.2012)
+* affichage exhaustif des arcs construits (MAJ 01.06.2012)

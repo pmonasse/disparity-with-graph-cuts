@@ -1,0 +1,38 @@
+LOAD_COLOR images/scene_l.ppm images/scene_r.ppm
+SET disp_range -5 0 5 0         # x_min y_min x_max y_max
+
+SET iter_max 50
+SET randomize_every_iteration
+
+# Regularization parameter. AUTO computes only an approximate
+# value. Should be tuned to get the best result.
+# If results look too noisy try increasing lambda
+# If results look oversmoothed try decreasing lambda
+# If there are too many occluded pixels try increasing K
+SET lambda AUTO
+SET K AUTO
+
+#############################################################
+# Other parameters that can be changed:
+#############################################################
+#SET data_cost ?    # L1 or L2 (default is L2)
+#SET I_threshold2 ? # intensity threshold - switches between
+                    # lambda1 and lambda2 (default is 8)
+#SET lambda1 ?      # (default is 3*lambda)
+#SET lambda2 ?      # (default is lambda)
+#SET K ?            # (default is 5*lambda)
+#############################################################
+
+# Running the algorithm
+KZ2
+
+# Saving results with occlusions
+SAVE_X kz2_occ.pgm
+SAVE_X_SCALED kz2_occ.ppm
+
+# Filling occlusions
+FILL_OCCLUSIONS
+
+# Saving results
+SAVE_X kz2.pgm
+SAVE_X_SCALED kz2.ppm
