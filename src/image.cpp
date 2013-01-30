@@ -90,12 +90,12 @@ void* imLoad(ImageType type, const char *filename)
     unsigned char* data=0;
     size_t xsize, ysize;
     if(type == IMAGE_GRAY)
-        data = read_png_u8_gray(filename, &xsize, &ysize);
+        data = io_png_read_u8_gray(filename, &xsize, &ysize);
     if(type == IMAGE_RGB)
-        data = read_png_u8_rgb(filename, &xsize, &ysize);
+        data = io_png_read_u8_rgb(filename, &xsize, &ysize);
     if(! data)
         return data;
-    
+
 	GeneralImage im = (GeneralImage) imNew(type, xsize, ysize);
     const size_t size = xsize*ysize;
     if(type == IMAGE_GRAY)
@@ -191,5 +191,3 @@ int imSave(void *im, const char *filename)
 	fclose(fp);
 	return 0;
 }
-
-
