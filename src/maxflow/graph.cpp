@@ -29,7 +29,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	arc_last = arcs;
 	arc_max = arcs + 2*edge_num_max;
 
-	maxflow_iteration = 0;
 	flow = 0;
 }
 
@@ -43,23 +42,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	}
 	free(nodes);
 	free(arcs);
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	void Graph<captype,tcaptype,flowtype>::reset()
-{
-	node_last = nodes;
-	arc_last = arcs;
-	node_num = 0;
-
-	if (nodeptr_block) 
-	{ 
-		delete nodeptr_block; 
-		nodeptr_block = NULL; 
-	}
-
-	maxflow_iteration = 0;
-	flow = 0;
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 

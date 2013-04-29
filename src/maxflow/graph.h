@@ -85,7 +85,7 @@ public:
 	Graph(int node_num_max, int edge_num_max, void (*err_function)(const char *) = NULL);
 
 	// Destructor
-	~Graph();
+	virtual ~Graph();
 
 	// Adds node(s) to the graph. By default, one node is added (num=1); then first call returns 0, second call returns 1, and so on. 
 	// If num>1, then several nodes are added, and node_id of the first one is returned.
@@ -105,9 +105,7 @@ public:
 
 
 	// Computes the maxflow. Can be called several times.
-	// FOR DESCRIPTION OF reuse_trees, SEE mark_node().
-	// FOR DESCRIPTION OF changed_list, SEE remove_from_changed_list().
-	flowtype maxflow(bool reuse_trees = false, Block<node_id>* changed_list = NULL);
+	flowtype maxflow();
 
 	// After the maxflow is computed, this function returns to which
 	// segment the node 'i' belongs (Graph<captype,tcaptype,flowtype>::SOURCE or Graph<captype,tcaptype,flowtype>::SINK).
@@ -128,21 +126,6 @@ private:
 	struct arc;
 
 public:
-
-	////////////////////////////
-	// 1. Reallocating graph. //
-	////////////////////////////
-
-	// Removes all nodes and edges. 
-	// After that functions add_node() and add_edge() must be called again. 
-	//
-	// Advantage compared to deleting Graph and allocating it again:
-	// no calls to delete/new (which could be quite slow).
-	//
-	// If the graph structure stays the same, then an alternative
-	// is to go through all nodes/edges and set new residual capacities
-	// (see functions below).
-	void reset();
 
 	////////////////////////////////////////////////////////////////////////////////
 	// 2. Functions for getting pointers to arcs and for reading graph structure. //
@@ -182,78 +165,6 @@ public:
 	void set_trcap(node_id i, tcaptype trcap); 
 	void set_rcap(arc* a, captype rcap);
 
-	////////////////////////////////////////////////////////////////////
-	// 5. Functions related to reusing trees & list of changed nodes. //
-	////////////////////////////////////////////////////////////////////
-
-	// If flag reuse_trees is true while calling maxflow(), then search trees
-	// are reused from previous maxflow computation. 
-	// In this case before calling maxflow() the user must
-	// specify which parts of the graph have changed by calling mark_node():
-	//   add_tweights(i),set_trcap(i)    => call mark_node(i)
-	//   add_edge(i,j),set_rcap(a)       => call mark_node(i); mark_node(j)
-	//
-	// This option makes sense only if a small part of the graph is changed.
-	// The initialization procedure goes only through marked nodes then.
-	// 
-	// mark_node(i) can either be called before or after graph modification.
-	// Can be called more than once per node, but calls after the first one
-	// do not have any effect.
-	// 
-	// NOTE: 
-	//   - This option cannot be used in the first call to maxflow().
-	//   - It is not necessary to call mark_node() if the change is ``not essential'',
-	//     i.e. sign(trcap) is preserved for a node and zero/nonzero status is preserved for an arc.
-	//   - To check that you marked all necessary nodes, you can call maxflow(false) after calling maxflow(true).
-	//     If everything is correct, the two calls must return the same value of flow. (Useful for debugging).
-	void mark_node(node_id i);
-
-	// If changed_list is not NULL while calling maxflow(), then the algorithm
-	// keeps a list of nodes which could potentially have changed their segmentation label.
-	// Nodes which are not in the list are guaranteed to keep their old segmentation label (SOURCE or SINK).
-	// Example usage:
-	//
-	//		typedef Graph<int,int,int> G;
-	//		G* g = new Graph(nodeNum, edgeNum);
-	//		Block<G::node_id>* changed_list = new Block<G::node_id>(128);
-	//
-	//		... // add nodes and edges
-	//
-	//		g->maxflow(); // first call should be without arguments
-	//		for (int iter=0; iter<10; iter++)
-	//		{
-	//			... // change graph, call mark_node() accordingly
-	//
-	//			g->maxflow(true, changed_list);
-	//			G::node_id* ptr;
-	//			for (ptr=changed_list->ScanFirst(); ptr; ptr=changed_list->ScanNext())
-	//			{
-	//				G::node_id i = *ptr; assert(i>=0 && i<nodeNum);
-	//				g->remove_from_changed_list(i);
-	//				// do something with node i...
-	//				if (g->what_segment(i) == G::SOURCE) { ... }
-	//			}
-	//			changed_list->Reset();
-	//		}
-	//		delete changed_list;
-	//		
-	// NOTE:
-	//  - If changed_list option is used, then reuse_trees must be used as well.
-	//  - In the example above, the user may omit calls g->remove_from_changed_list(i) and changed_list->Reset() in a given iteration.
-	//    Then during the next call to maxflow(true, &changed_list) new nodes will be added to changed_list.
-	//  - If the next call to maxflow() does not use option reuse_trees, then calling remove_from_changed_list()
-	//    is not necessary. ("changed_list->Reset()" or "delete changed_list" should still be called, though).
-	void remove_from_changed_list(node_id i) 
-	{ 
-		assert(i>=0 && i<node_num && nodes[i].is_in_changed_list); 
-		nodes[i].is_in_changed_list = 0;
-	}
-
-
-
-
-
-
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -271,8 +182,6 @@ private:
 		int			TS;			// timestamp showing when DIST was computed
 		int			DIST;		// distance to the terminal
 		int			is_sink : 1;	// flag showing whether the node is in the source or in the sink tree (if parent!=NULL)
-		int			is_marked : 1;	// set by mark_node()
-		int			is_in_changed_list : 1; // set by maxflow if 
 
 		tcaptype	tr_cap;		// if tr_cap > 0 then tr_cap is residual capacity of the arc SOURCE->node
 								// otherwise         -tr_cap is residual capacity of the arc node->SINK 
@@ -308,13 +217,9 @@ private:
 
 	flowtype			flow;		// total flow
 
-	// reusing trees & list of changed pixels
-	int					maxflow_iteration; // counter
-	Block<node_id>		*changed_list;
-
 	/////////////////////////////////////////////////////////////////////////
 
-	node				*queue_first[2], *queue_last[2];	// list of active nodes
+	node				*queue_first, *queue_last;	// list of active nodes
 	nodeptr				*orphan_first, *orphan_last;		// list of pointers to orphans
 	int					TIME;								// monotonically increasing global counter
 
@@ -328,13 +233,9 @@ private:
 	node *next_active();
 
 	// functions for processing orphans list
-	void set_orphan_front(node* i); // add to the beginning of the list
-	void set_orphan_rear(node* i);  // add to the end of the list
+	void set_orphan(node* i);  // add to the end of the list
 
-	void add_to_changed_list(node* i);
-
-	void maxflow_init();             // called if reuse_trees == false
-	void maxflow_reuse_trees_init(); // called if reuse_trees == true
+	void maxflow_init();
 	void augment(arc *middle_arc);
 	void process_source_orphan(node *i);
 	void process_sink_orphan(node *i);
@@ -342,21 +243,9 @@ private:
 	void test_consistency(node* current_node=NULL); // debug function
 };
 
-
-
-
-
-
-
-
-
-
-
 ///////////////////////////////////////
 // Implementation - inline functions //
 ///////////////////////////////////////
-
-
 
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline typename Graph<captype,tcaptype,flowtype>::node_id Graph<captype,tcaptype,flowtype>::add_node(int num)
@@ -474,21 +363,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	{
 		return default_segm;
 	}
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::mark_node(node_id _i)
-{
-	node* i = nodes + _i;
-	if (!i->next)
-	{
-		/* it's not in the list yet */
-		if (queue_last[1]) queue_last[1] -> next = i;
-		else               queue_first[1]        = i;
-		queue_last[1] = i;
-		i -> next = i;
-	}
-	i->is_marked = 1;
 }
 
 #include "graph.cpp"

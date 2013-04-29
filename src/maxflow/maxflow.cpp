@@ -19,12 +19,6 @@
 	i->next points to the next node in the list
 	(or to i, if i is the last node in the list).
 	If i->next is NULL iff i is not in the list.
-
-	There are two queues. Active nodes are added
-	to the end of the second queue and read from
-	the front of the first queue. If the first queue
-	is empty, it is replaced by the second queue
-	(and the second queue becomes empty).
 */
 
 
@@ -34,9 +28,9 @@ template <typename captype, typename tcaptype, typename flowtype>
 	if (!i->next)
 	{
 		/* it's not in the list yet */
-		if (queue_last[1]) queue_last[1] -> next = i;
-		else               queue_first[1]        = i;
-		queue_last[1] = i;
+		if (queue_last) queue_last -> next = i;
+		else               queue_first        = i;
+		queue_last = i;
 		i -> next = i;
 	}
 }
@@ -53,18 +47,12 @@ template <typename captype, typename tcaptype, typename flowtype>
 
 	while ( 1 )
 	{
-		if (!(i=queue_first[0]))
-		{
-			queue_first[0] = i = queue_first[1];
-			queue_last[0]  = queue_last[1];
-			queue_first[1] = NULL;
-			queue_last[1]  = NULL;
-			if (!i) return NULL;
-		}
+		if (!(i=queue_first))
+            return NULL;
 
 		/* remove it from the active list */
-		if (i->next == i) queue_first[0] = queue_last[0] = NULL;
-		else              queue_first[0] = i -> next;
+		if (i->next == i) queue_first = queue_last = NULL;
+		else              queue_first = i -> next;
 		i -> next = NULL;
 
 		/* a node in the list is active iff it has a parent */
@@ -75,18 +63,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 /***********************************************************************/
 
 template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::set_orphan_front(node *i)
-{
-	nodeptr *np;
-	i -> parent = ORPHAN;
-	np = nodeptr_block -> New();
-	np -> ptr = i;
-	np -> next = orphan_first;
-	orphan_first = np;
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::set_orphan_rear(node *i)
+	inline void Graph<captype,tcaptype,flowtype>::set_orphan(node *i)
 {
 	nodeptr *np;
 	i -> parent = ORPHAN;
@@ -101,25 +78,11 @@ template <typename captype, typename tcaptype, typename flowtype>
 /***********************************************************************/
 
 template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::add_to_changed_list(node *i)
-{
-	if (changed_list && !i->is_in_changed_list)
-	{
-		node_id* ptr = changed_list->New();
-		*ptr = (node_id)(i - nodes);
-		i->is_in_changed_list = true;
-	}
-}
-
-/***********************************************************************/
-
-template <typename captype, typename tcaptype, typename flowtype> 
 	void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
 	node *i;
 
-	queue_first[0] = queue_last[0] = NULL;
-	queue_first[1] = queue_last[1] = NULL;
+	queue_first = queue_last = NULL;
 	orphan_first = NULL;
 
 	TIME = 0;
@@ -127,8 +90,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	for (i=nodes; i<node_last; i++)
 	{
 		i -> next = NULL;
-		i -> is_marked = 0;
-		i -> is_in_changed_list = 0;
 		i -> TS = TIME;
 		if (i->tr_cap > 0)
 		{
@@ -151,91 +112,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 			i -> parent = NULL;
 		}
 	}
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	void Graph<captype,tcaptype,flowtype>::maxflow_reuse_trees_init()
-{
-	node* i;
-	node* j;
-	node* queue = queue_first[1];
-	arc* a;
-	nodeptr* np;
-
-	queue_first[0] = queue_last[0] = NULL;
-	queue_first[1] = queue_last[1] = NULL;
-	orphan_first = orphan_last = NULL;
-
-	TIME ++;
-
-	while ((i=queue))
-	{
-		queue = i->next;
-		if (queue == i) queue = NULL;
-		i->next = NULL;
-		i->is_marked = 0;
-		set_active(i);
-
-		if (i->tr_cap == 0)
-		{
-			if (i->parent) set_orphan_rear(i);
-			continue;
-		}
-
-		if (i->tr_cap > 0)
-		{
-			if (!i->parent || i->is_sink)
-			{
-				i->is_sink = 0;
-				for (a=i->first; a; a=a->next)
-				{
-					j = a->head;
-					if (!j->is_marked)
-					{
-						if (j->parent == a->sister) set_orphan_rear(j);
-						if (j->parent && j->is_sink && a->r_cap > 0) set_active(j);
-					}
-				}
-				add_to_changed_list(i);
-			}
-		}
-		else
-		{
-			if (!i->parent || !i->is_sink)
-			{
-				i->is_sink = 1;
-				for (a=i->first; a; a=a->next)
-				{
-					j = a->head;
-					if (!j->is_marked)
-					{
-						if (j->parent == a->sister) set_orphan_rear(j);
-						if (j->parent && !j->is_sink && a->sister->r_cap > 0) set_active(j);
-					}
-				}
-				add_to_changed_list(i);
-			}
-		}
-		i->parent = TERMINAL;
-		i -> TS = TIME;
-		i -> DIST = 1;
-	}
-
-	//test_consistency();
-
-	/* adoption */
-	while ((np=orphan_first))
-	{
-		orphan_first = np -> next;
-		i = np -> ptr;
-		nodeptr_block -> Delete(np);
-		if (!orphan_first) orphan_last = NULL;
-		if (i->is_sink) process_sink_orphan(i);
-		else            process_source_orphan(i);
-	}
-	/* adoption end */
-
-	//test_consistency();
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 
@@ -278,13 +154,13 @@ template <typename captype, typename tcaptype, typename flowtype>
 		a -> sister -> r_cap -= bottleneck;
 		if (!a->sister->r_cap)
 		{
-			set_orphan_front(i); // add i to the beginning of the adoption list
+			set_orphan(i); // add i to the beginning of the adoption list
 		}
 	}
 	i -> tr_cap -= bottleneck;
 	if (!i->tr_cap)
 	{
-		set_orphan_front(i); // add i to the beginning of the adoption list
+		set_orphan(i); // add i to the beginning of the adoption list
 	}
 	/* 2b - the sink tree */
 	for (i=middle_arc->head; ; i=a->head)
@@ -295,13 +171,13 @@ template <typename captype, typename tcaptype, typename flowtype>
 		a -> r_cap -= bottleneck;
 		if (!a->r_cap)
 		{
-			set_orphan_front(i); // add i to the beginning of the adoption list
+			set_orphan(i); // add i to the beginning of the adoption list
 		}
 	}
 	i -> tr_cap += bottleneck;
 	if (!i->tr_cap)
 	{
-		set_orphan_front(i); // add i to the beginning of the adoption list
+		set_orphan(i); // add i to the beginning of the adoption list
 	}
 
 
@@ -369,8 +245,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	else
 	{
 		/* no parent is found */
-		add_to_changed_list(i);
-
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
 		{
@@ -380,7 +254,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 				if (a0->sister->r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					set_orphan_rear(j); // add j to the end of the adoption list
+					set_orphan(j); // add j to the end of the adoption list
 				}
 			}
 		}
@@ -446,8 +320,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	else
 	{
 		/* no parent is found */
-		add_to_changed_list(i);
-
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
 		{
@@ -457,7 +329,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 				if (a0->r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					set_orphan_rear(j); // add j to the end of the adoption list
+					set_orphan(j); // add j to the end of the adoption list
 				}
 			}
 		}
@@ -467,23 +339,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 /***********************************************************************/
 
 template <typename captype, typename tcaptype, typename flowtype> 
-	flowtype Graph<captype,tcaptype,flowtype>::maxflow(bool reuse_trees, Block<node_id>* _changed_list)
+	flowtype Graph<captype,tcaptype,flowtype>::maxflow()
 {
 	node *i, *j, *current_node = NULL;
 	arc *a;
 	nodeptr *np, *np_next;
 
-	if (!nodeptr_block)
-	{
-		nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE, error_function);
-	}
+    nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE, error_function);
 
-	changed_list = _changed_list;
-	if (maxflow_iteration == 0 && reuse_trees) { if (error_function) (*error_function)("reuse_trees cannot be used in the first call to maxflow()!"); exit(1); }
-	if (changed_list && !reuse_trees) { if (error_function) (*error_function)("changed_list cannot be used without reuse_trees!"); exit(1); }
-
-	if (reuse_trees) maxflow_reuse_trees_init();
-	else             maxflow_init();
+    maxflow_init();
 
 	// main loop
 	while ( 1 )
@@ -515,7 +379,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
-					add_to_changed_list(j);
 				}
 				else if (j->is_sink) break;
 				else if (j->TS <= i->TS &&
@@ -542,7 +405,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
-					add_to_changed_list(j);
 				}
 				else if (!j->is_sink) { a = a -> sister; break; }
 				else if (j->TS <= i->TS &&
@@ -591,13 +453,9 @@ template <typename captype, typename tcaptype, typename flowtype>
 	}
 	// test_consistency();
 
-	if (!reuse_trees || (maxflow_iteration % 64) == 0)
-	{
-		delete nodeptr_block; 
-		nodeptr_block = NULL; 
-	}
+    delete nodeptr_block; 
+    nodeptr_block = NULL; 
 
-	maxflow_iteration ++;
 	return flow;
 }
 
@@ -617,16 +475,16 @@ template <typename captype, typename tcaptype, typename flowtype>
 	{
 		if (i->next || i==current_node) num1 ++;
 	}
-	for (r=0; r<3; r++)
+	for (r=0; r<2; r++)
 	{
-		i = (r == 2) ? current_node : queue_first[r];
+		i = (r == 1) ? current_node : queue_first;
 		if (i)
 		for ( ; ; i=i->next)
 		{
 			num2 ++;
 			if (i->next == i)
 			{
-				if (r<2) assert(i == queue_last[r]);
+				if (r<1) assert(i == queue_last);
 				else     assert(i == current_node);
 				break;
 			}
