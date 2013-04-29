@@ -1,74 +1,125 @@
+#ifdef __GRAPH_H__
 /* graph.cpp */
-/*
-    Copyright 2001 Vladimir Kolmogorov (vnk@cs.cornell.edu), Yuri Boykov (yuri@csd.uwo.ca).
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
-
 
 #include <stdio.h>
-#include "graph.h"
+#include <stdlib.h>
+#include <string.h>
 
-Graph::Graph(void (*err_function)(const char *))
+/*
+	special constants for node->parent. Duplicated in maxflow.cpp, both should match!
+*/
+#define TERMINAL ( (arc *) 1 )		/* to terminal */
+#define ORPHAN   ( (arc *) 2 )		/* orphan */
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	Graph<captype, tcaptype, flowtype>::Graph(int node_num_max, int edge_num_max, void (*err_function)(const char *))
+	: node_num(0),
+	  nodeptr_block(NULL),
+	  error_function(err_function)
 {
-	error_function = err_function;
-	node_block = new Block<node>(NODE_BLOCK_SIZE, error_function);
-	arc_block  = new Block<arc>(NODE_BLOCK_SIZE, error_function);
+	if (node_num_max < 16) node_num_max = 16;
+	if (edge_num_max < 16) edge_num_max = 16;
+
+	nodes = (node*) malloc(node_num_max*sizeof(node));
+	arcs = (arc*) malloc(2*edge_num_max*sizeof(arc));
+	if (!nodes || !arcs) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
+
+	node_last = nodes;
+	node_max = nodes + node_num_max;
+	arc_last = arcs;
+	arc_max = arcs + 2*edge_num_max;
+
+	maxflow_iteration = 0;
 	flow = 0;
 }
 
-Graph::~Graph()
+template <typename captype, typename tcaptype, typename flowtype> 
+	Graph<captype,tcaptype,flowtype>::~Graph()
 {
-	delete node_block;
-	delete arc_block;
+	if (nodeptr_block) 
+	{ 
+		delete nodeptr_block; 
+		nodeptr_block = NULL; 
+	}
+	free(nodes);
+	free(arcs);
 }
 
-Graph::node_id Graph::add_node()
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::reset()
 {
-	node *i = node_block -> New();
+	node_last = nodes;
+	arc_last = arcs;
+	node_num = 0;
 
-	i -> first = NULL;
-	i -> tr_cap = 0;
+	if (nodeptr_block) 
+	{ 
+		delete nodeptr_block; 
+		nodeptr_block = NULL; 
+	}
 
-	return (node_id) i;
+	maxflow_iteration = 0;
+	flow = 0;
 }
 
-void Graph::add_edge(node_id from, node_id to, captype cap, captype rev_cap)
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::reallocate_nodes(int num)
 {
-	arc *a, *a_rev;
+	int node_num_max = (int)(node_max - nodes);
+	node* nodes_old = nodes;
 
-	a = arc_block -> New(2);
-	a_rev = a + 1;
+	node_num_max += node_num_max / 2;
+	if (node_num_max < node_num + num) node_num_max = node_num + num;
+	nodes = (node*) realloc(nodes_old, node_num_max*sizeof(node));
+	if (!nodes) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
 
-	a -> sister = a_rev;
-	a_rev -> sister = a;
-	a -> next = ((node*)from) -> first;
-	((node*)from) -> first = a;
-	a_rev -> next = ((node*)to) -> first;
-	((node*)to) -> first = a_rev;
-	a -> head = (node*)to;
-	a_rev -> head = (node*)from;
-	a -> r_cap = cap;
-	a_rev -> r_cap = rev_cap;
+	node_last = nodes + node_num;
+	node_max = nodes + node_num_max;
+
+	if (nodes != nodes_old)
+	{
+		node* i;
+		arc* a;
+		for (i=nodes; i<node_last; i++)
+		{
+			if (i->next) i->next = (node*) ((char*)i->next + (((char*) nodes) - ((char*) nodes_old)));
+		}
+		for (a=arcs; a<arc_last; a++)
+		{
+			a->head = (node*) ((char*)a->head + (((char*) nodes) - ((char*) nodes_old)));
+		}
+	}
 }
 
-void Graph::add_tweights(node_id i, captype cap_source, captype cap_sink)
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::reallocate_arcs()
 {
-	register captype delta = ((node*)i) -> tr_cap;
-	if (delta > 0) cap_source += delta;
-	else           cap_sink   -= delta;
-	flow += (cap_source < cap_sink) ? cap_source : cap_sink;
-	((node*)i) -> tr_cap = cap_source - cap_sink;
+	int arc_num_max = (int)(arc_max - arcs);
+	int arc_num = (int)(arc_last - arcs);
+	arc* arcs_old = arcs;
+
+	arc_num_max += arc_num_max / 2; if (arc_num_max & 1) arc_num_max ++;
+	arcs = (arc*) realloc(arcs_old, arc_num_max*sizeof(arc));
+	if (!arcs) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
+
+	arc_last = arcs + arc_num;
+	arc_max = arcs + arc_num_max;
+
+	if (arcs != arcs_old)
+	{
+		node* i;
+		arc* a;
+		for (i=nodes; i<node_last; i++)
+		{
+			if (i->first) i->first = (arc*) ((char*)i->first + (((char*) arcs) - ((char*) arcs_old)));
+			if (i->parent && i->parent != ORPHAN && i->parent != TERMINAL) i->parent = (arc*) ((char*)i->parent + (((char*) arcs) - ((char*) arcs_old)));
+		}
+		for (a=arcs; a<arc_last; a++)
+		{
+			if (a->next) a->next = (arc*) ((char*)a->next + (((char*) arcs) - ((char*) arcs_old)));
+			a->sister = (arc*) ((char*)a->sister + (((char*) arcs) - ((char*) arcs_old)));
+		}
+	}
 }
+
+#endif

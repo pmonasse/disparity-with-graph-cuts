@@ -27,7 +27,7 @@ void * imNew(ImageType type, int xsize, int ysize)
 		case IMAGE_GRAY:   data_size = sizeof(unsigned char);    break;
 		case IMAGE_SHORT:  data_size = sizeof(short);            break;
 		case IMAGE_RGB:    data_size = sizeof(unsigned char[3]); break;
-		case IMAGE_LONG:   data_size = sizeof(long);             break;
+		case IMAGE_INT:    data_size = sizeof(int);              break;
 		case IMAGE_PTR:    data_size = sizeof(void *);           break;
 		case IMAGE_FLOAT:  data_size = sizeof(float);            break;
 		case IMAGE_DOUBLE: data_size = sizeof(double);           break;
@@ -61,7 +61,7 @@ void SwapBytes(GeneralImage im)
 	{
 		ImageType type = imHeader(im) -> type;
 
-		if (type==IMAGE_SHORT || type==IMAGE_LONG || type==IMAGE_FLOAT || type==IMAGE_DOUBLE)
+		if (type==IMAGE_SHORT || type==IMAGE_INT || type==IMAGE_FLOAT || type==IMAGE_DOUBLE)
 		{
 			char *ptr, c;
 			int i, k;
@@ -151,7 +151,7 @@ int imSave(void *im, const char *filename)
 		case IMAGE_SHORT:
 			fprintf(fp, "Q4\n%d %d\n", xsize, ysize);
 			break;
-		case IMAGE_LONG:
+		case IMAGE_INT:
 			fprintf(fp, "Q3\n%d %d\n", xsize, ysize);
 			break;
 		case IMAGE_FLOAT:

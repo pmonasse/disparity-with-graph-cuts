@@ -61,9 +61,9 @@ int Match::ComputeEnergy()
 
 //[IPOL] in vars0 VAR_ACTIVE means that the pixel has the disparity alpha in the initial configuration (before the expansion move) and VAR_NONPRESENT means that the pixel is occluded in this configuration
 //[IPOL] in varsA VAR_ACTIVE means that the pixel has the disparity alpha in the initial configuration (before the expansion move) and VAR_NONPRESENT means that the pixel p+a is not in the image
-#define VAR_ACTIVE     ((Energy::Var)0)
-#define VAR_NONPRESENT ((Energy::Var)1)
-#define IS_VAR(var) ((size_t)var>1)
+#define VAR_ACTIVE     ((Energy::Var)-1)
+#define VAR_NONPRESENT ((Energy::Var)-2)
+#define IS_VAR(var) (var>=0)
 
 /*
 	for assignments in A^0:

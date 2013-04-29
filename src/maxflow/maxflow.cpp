@@ -1,33 +1,16 @@
+#ifdef __GRAPH_H__
 /* maxflow.cpp */
-/*
-    Copyright 2001 Vladimir Kolmogorov (vnk@cs.cornell.edu), Yuri Boykov (yuri@csd.uwo.ca).
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
-
 
 #include <stdio.h>
-#include "graph.h"
 
 /*
-	special constants for node->parent
+	special constants for node->parent. Duplicated in graph.cpp, both should match!
 */
 #define TERMINAL ( (arc *) 1 )		/* to terminal */
 #define ORPHAN   ( (arc *) 2 )		/* orphan */
 
-#define INFINITE_D 1000000000		/* infinite distance to the terminal */
+
+#define INFINITE_D ((int)(((unsigned)-1)/2))		/* infinite distance to the terminal */
 
 /***********************************************************************/
 
@@ -35,7 +18,7 @@
 	Functions for processing active list.
 	i->next points to the next node in the list
 	(or to i, if i is the last node in the list).
-	i->next is NULL iff i is not in the list.
+	If i->next is NULL iff i is not in the list.
 
 	There are two queues. Active nodes are added
 	to the end of the second queue and read from
@@ -44,7 +27,9 @@
 	(and the second queue becomes empty).
 */
 
-inline void Graph::set_active(node *i)
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	inline void Graph<captype,tcaptype,flowtype>::set_active(node *i)
 {
 	if (!i->next)
 	{
@@ -61,7 +46,8 @@ inline void Graph::set_active(node *i)
 	If it is connected to the sink, it stays in the list,
 	otherwise it is removed from the list
 */
-inline Graph::node * Graph::next_active()
+template <typename captype, typename tcaptype, typename flowtype> 
+	inline typename Graph<captype,tcaptype,flowtype>::node* Graph<captype,tcaptype,flowtype>::next_active()
 {
 	node *i;
 
@@ -88,7 +74,47 @@ inline Graph::node * Graph::next_active()
 
 /***********************************************************************/
 
-void Graph::maxflow_init()
+template <typename captype, typename tcaptype, typename flowtype> 
+	inline void Graph<captype,tcaptype,flowtype>::set_orphan_front(node *i)
+{
+	nodeptr *np;
+	i -> parent = ORPHAN;
+	np = nodeptr_block -> New();
+	np -> ptr = i;
+	np -> next = orphan_first;
+	orphan_first = np;
+}
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	inline void Graph<captype,tcaptype,flowtype>::set_orphan_rear(node *i)
+{
+	nodeptr *np;
+	i -> parent = ORPHAN;
+	np = nodeptr_block -> New();
+	np -> ptr = i;
+	if (orphan_last) orphan_last -> next = np;
+	else             orphan_first        = np;
+	orphan_last = np;
+	np -> next = NULL;
+}
+
+/***********************************************************************/
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	inline void Graph<captype,tcaptype,flowtype>::add_to_changed_list(node *i)
+{
+	if (changed_list && !i->is_in_changed_list)
+	{
+		node_id* ptr = changed_list->New();
+		*ptr = (node_id)(i - nodes);
+		i->is_in_changed_list = true;
+	}
+}
+
+/***********************************************************************/
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
 	node *i;
 
@@ -96,17 +122,20 @@ void Graph::maxflow_init()
 	queue_first[1] = queue_last[1] = NULL;
 	orphan_first = NULL;
 
-	for (i=node_block->ScanFirst(); i; i=node_block->ScanNext())
+	TIME = 0;
+
+	for (i=nodes; i<node_last; i++)
 	{
 		i -> next = NULL;
-		i -> TS = 0;
+		i -> is_marked = 0;
+		i -> is_in_changed_list = 0;
+		i -> TS = TIME;
 		if (i->tr_cap > 0)
 		{
 			/* i is connected to the source */
 			i -> is_sink = 0;
 			i -> parent = TERMINAL;
 			set_active(i);
-			i -> TS = 0;
 			i -> DIST = 1;
 		}
 		else if (i->tr_cap < 0)
@@ -115,7 +144,6 @@ void Graph::maxflow_init()
 			i -> is_sink = 1;
 			i -> parent = TERMINAL;
 			set_active(i);
-			i -> TS = 0;
 			i -> DIST = 1;
 		}
 		else
@@ -123,17 +151,99 @@ void Graph::maxflow_init()
 			i -> parent = NULL;
 		}
 	}
-	TIME = 0;
 }
 
-/***********************************************************************/
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::maxflow_reuse_trees_init()
+{
+	node* i;
+	node* j;
+	node* queue = queue_first[1];
+	arc* a;
+	nodeptr* np;
 
-void Graph::augment(arc *middle_arc)
+	queue_first[0] = queue_last[0] = NULL;
+	queue_first[1] = queue_last[1] = NULL;
+	orphan_first = orphan_last = NULL;
+
+	TIME ++;
+
+	while ((i=queue))
+	{
+		queue = i->next;
+		if (queue == i) queue = NULL;
+		i->next = NULL;
+		i->is_marked = 0;
+		set_active(i);
+
+		if (i->tr_cap == 0)
+		{
+			if (i->parent) set_orphan_rear(i);
+			continue;
+		}
+
+		if (i->tr_cap > 0)
+		{
+			if (!i->parent || i->is_sink)
+			{
+				i->is_sink = 0;
+				for (a=i->first; a; a=a->next)
+				{
+					j = a->head;
+					if (!j->is_marked)
+					{
+						if (j->parent == a->sister) set_orphan_rear(j);
+						if (j->parent && j->is_sink && a->r_cap > 0) set_active(j);
+					}
+				}
+				add_to_changed_list(i);
+			}
+		}
+		else
+		{
+			if (!i->parent || !i->is_sink)
+			{
+				i->is_sink = 1;
+				for (a=i->first; a; a=a->next)
+				{
+					j = a->head;
+					if (!j->is_marked)
+					{
+						if (j->parent == a->sister) set_orphan_rear(j);
+						if (j->parent && !j->is_sink && a->sister->r_cap > 0) set_active(j);
+					}
+				}
+				add_to_changed_list(i);
+			}
+		}
+		i->parent = TERMINAL;
+		i -> TS = TIME;
+		i -> DIST = 1;
+	}
+
+	//test_consistency();
+
+	/* adoption */
+	while ((np=orphan_first))
+	{
+		orphan_first = np -> next;
+		i = np -> ptr;
+		nodeptr_block -> Delete(np);
+		if (!orphan_first) orphan_last = NULL;
+		if (i->is_sink) process_sink_orphan(i);
+		else            process_source_orphan(i);
+	}
+	/* adoption end */
+
+	//test_consistency();
+}
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::augment(arc *middle_arc)
 {
 	node *i;
 	arc *a;
-	captype bottleneck;
-	nodeptr *np;
+	tcaptype bottleneck;
 
 
 	/* 1. Finding bottleneck capacity */
@@ -168,23 +278,13 @@ void Graph::augment(arc *middle_arc)
 		a -> sister -> r_cap -= bottleneck;
 		if (!a->sister->r_cap)
 		{
-			/* add i to the adoption list */
-			i -> parent = ORPHAN;
-			np = nodeptr_block -> New();
-			np -> ptr = i;
-			np -> next = orphan_first;
-			orphan_first = np;
+			set_orphan_front(i); // add i to the beginning of the adoption list
 		}
 	}
 	i -> tr_cap -= bottleneck;
 	if (!i->tr_cap)
 	{
-		/* add i to the adoption list */
-		i -> parent = ORPHAN;
-		np = nodeptr_block -> New();
-		np -> ptr = i;
-		np -> next = orphan_first;
-		orphan_first = np;
+		set_orphan_front(i); // add i to the beginning of the adoption list
 	}
 	/* 2b - the sink tree */
 	for (i=middle_arc->head; ; i=a->head)
@@ -195,23 +295,13 @@ void Graph::augment(arc *middle_arc)
 		a -> r_cap -= bottleneck;
 		if (!a->r_cap)
 		{
-			/* add i to the adoption list */
-			i -> parent = ORPHAN;
-			np = nodeptr_block -> New();
-			np -> ptr = i;
-			np -> next = orphan_first;
-			orphan_first = np;
+			set_orphan_front(i); // add i to the beginning of the adoption list
 		}
 	}
 	i -> tr_cap += bottleneck;
 	if (!i->tr_cap)
 	{
-		/* add i to the adoption list */
-		i -> parent = ORPHAN;
-		np = nodeptr_block -> New();
-		np -> ptr = i;
-		np -> next = orphan_first;
-		orphan_first = np;
+		set_orphan_front(i); // add i to the beginning of the adoption list
 	}
 
 
@@ -220,11 +310,11 @@ void Graph::augment(arc *middle_arc)
 
 /***********************************************************************/
 
-void Graph::process_source_orphan(node *i)
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::process_source_orphan(node *i)
 {
 	node *j;
 	arc *a0, *a0_min = NULL, *a;
-	nodeptr *np;
 	int d, d_min = INFINITE_D;
 
 	/* trying to find a new parent */
@@ -271,7 +361,7 @@ void Graph::process_source_orphan(node *i)
 		}
 	}
 
-	if ((i->parent = a0_min)!=0)
+	if ((i->parent = a0_min) != 0)
 	{
 		i -> TS = TIME;
 		i -> DIST = d_min + 1;
@@ -279,7 +369,7 @@ void Graph::process_source_orphan(node *i)
 	else
 	{
 		/* no parent is found */
-		i -> TS = 0;
+		add_to_changed_list(i);
 
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
@@ -290,25 +380,18 @@ void Graph::process_source_orphan(node *i)
 				if (a0->sister->r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					/* add j to the adoption list */
-					j -> parent = ORPHAN;
-					np = nodeptr_block -> New();
-					np -> ptr = j;
-					if (orphan_last) orphan_last -> next = np;
-					else             orphan_first        = np;
-					orphan_last = np;
-					np -> next = NULL;
+					set_orphan_rear(j); // add j to the end of the adoption list
 				}
 			}
 		}
 	}
 }
 
-void Graph::process_sink_orphan(node *i)
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::process_sink_orphan(node *i)
 {
 	node *j;
 	arc *a0, *a0_min = NULL, *a;
-	nodeptr *np;
 	int d, d_min = INFINITE_D;
 
 	/* trying to find a new parent */
@@ -355,7 +438,7 @@ void Graph::process_sink_orphan(node *i)
 		}
 	}
 
-	if ((i->parent = a0_min)!=0)
+	if ((i->parent = a0_min) != 0)
 	{
 		i -> TS = TIME;
 		i -> DIST = d_min + 1;
@@ -363,7 +446,7 @@ void Graph::process_sink_orphan(node *i)
 	else
 	{
 		/* no parent is found */
-		i -> TS = 0;
+		add_to_changed_list(i);
 
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
@@ -374,14 +457,7 @@ void Graph::process_sink_orphan(node *i)
 				if (a0->r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					/* add j to the adoption list */
-					j -> parent = ORPHAN;
-					np = nodeptr_block -> New();
-					np -> ptr = j;
-					if (orphan_last) orphan_last -> next = np;
-					else             orphan_first        = np;
-					orphan_last = np;
-					np -> next = NULL;
+					set_orphan_rear(j); // add j to the end of the adoption list
 				}
 			}
 		}
@@ -390,18 +466,31 @@ void Graph::process_sink_orphan(node *i)
 
 /***********************************************************************/
 
-Graph::flowtype Graph::maxflow()
+template <typename captype, typename tcaptype, typename flowtype> 
+	flowtype Graph<captype,tcaptype,flowtype>::maxflow(bool reuse_trees, Block<node_id>* _changed_list)
 {
 	node *i, *j, *current_node = NULL;
 	arc *a;
 	nodeptr *np, *np_next;
 
-	maxflow_init();
-	nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE, error_function);
+	if (!nodeptr_block)
+	{
+		nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE, error_function);
+	}
 
+	changed_list = _changed_list;
+	if (maxflow_iteration == 0 && reuse_trees) { if (error_function) (*error_function)("reuse_trees cannot be used in the first call to maxflow()!"); exit(1); }
+	if (changed_list && !reuse_trees) { if (error_function) (*error_function)("changed_list cannot be used without reuse_trees!"); exit(1); }
+
+	if (reuse_trees) maxflow_reuse_trees_init();
+	else             maxflow_init();
+
+	// main loop
 	while ( 1 )
 	{
-		if ((i=current_node)!=0)
+		// test_consistency(current_node);
+
+		if ((i=current_node))
 		{
 			i -> next = NULL; /* remove active flag */
 			if (!i->parent) i = NULL;
@@ -426,6 +515,7 @@ Graph::flowtype Graph::maxflow()
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
+					add_to_changed_list(j);
 				}
 				else if (j->is_sink) break;
 				else if (j->TS <= i->TS &&
@@ -452,6 +542,7 @@ Graph::flowtype Graph::maxflow()
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
+					add_to_changed_list(j);
 				}
 				else if (!j->is_sink) { a = a -> sister; break; }
 				else if (j->TS <= i->TS &&
@@ -477,12 +568,12 @@ Graph::flowtype Graph::maxflow()
 			/* augmentation end */
 
 			/* adoption */
-			while ((np=orphan_first)!=0)
+			while ((np=orphan_first))
 			{
 				np_next = np -> next;
 				np -> next = NULL;
 
-				while ((np=orphan_first)!=0)
+				while ((np=orphan_first))
 				{
 					orphan_first = np -> next;
 					i = np -> ptr;
@@ -498,17 +589,94 @@ Graph::flowtype Graph::maxflow()
 		}
 		else current_node = NULL;
 	}
+	// test_consistency();
 
-	delete nodeptr_block;
+	if (!reuse_trees || (maxflow_iteration % 64) == 0)
+	{
+		delete nodeptr_block; 
+		nodeptr_block = NULL; 
+	}
 
+	maxflow_iteration ++;
 	return flow;
 }
 
 /***********************************************************************/
 
-Graph::termtype Graph::what_segment(node_id i)
+
+template <typename captype, typename tcaptype, typename flowtype> 
+	void Graph<captype,tcaptype,flowtype>::test_consistency(node* current_node)
 {
-	if (((node*)i)->parent && !((node*)i)->is_sink) return SOURCE;
-	return SINK;
+	node *i;
+	arc *a;
+	int r;
+	int num1 = 0, num2 = 0;
+
+	// test whether all nodes i with i->next!=NULL are indeed in the queue
+	for (i=nodes; i<node_last; i++)
+	{
+		if (i->next || i==current_node) num1 ++;
+	}
+	for (r=0; r<3; r++)
+	{
+		i = (r == 2) ? current_node : queue_first[r];
+		if (i)
+		for ( ; ; i=i->next)
+		{
+			num2 ++;
+			if (i->next == i)
+			{
+				if (r<2) assert(i == queue_last[r]);
+				else     assert(i == current_node);
+				break;
+			}
+		}
+	}
+	assert(num1 == num2);
+
+	for (i=nodes; i<node_last; i++)
+	{
+		// test whether all edges in seach trees are non-saturated
+		if (i->parent == NULL) {}
+		else if (i->parent == ORPHAN) {}
+		else if (i->parent == TERMINAL)
+		{
+			if (!i->is_sink) assert(i->tr_cap > 0);
+			else             assert(i->tr_cap < 0);
+		}
+		else
+		{
+			if (!i->is_sink) assert (i->parent->sister->r_cap > 0);
+			else             assert (i->parent->r_cap > 0);
+		}
+		// test whether passive nodes in search trees have neighbors in
+		// a different tree through non-saturated edges
+		if (i->parent && !i->next)
+		{
+			if (!i->is_sink)
+			{
+				assert(i->tr_cap >= 0);
+				for (a=i->first; a; a=a->next)
+				{
+					if (a->r_cap > 0) assert(a->head->parent && !a->head->is_sink);
+				}
+			}
+			else
+			{
+				assert(i->tr_cap <= 0);
+				for (a=i->first; a; a=a->next)
+				{
+					if (a->sister->r_cap > 0) assert(a->head->parent && a->head->is_sink);
+				}
+			}
+		}
+		// test marking invariants
+		if (i->parent && i->parent!=ORPHAN && i->parent!=TERMINAL)
+		{
+			assert(i->TS <= i->parent->head->TS);
+			if (i->TS == i->parent->head->TS) assert(i->DIST > i->parent->head->DIST);
+		}
+	}
 }
 
+#endif

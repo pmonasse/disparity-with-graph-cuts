@@ -1,22 +1,20 @@
 ###################################################################
 #                                                                 #
 #    MAXFLOW - software for computing mincut/maxflow in a graph   #
-#                        Version 2.2                              #
-#    http://www.cs.cornell.edu/People/vnk/software.html           #
+#                        Version 3.02                             #
+#    http://http://pub.ist.ac.at/~vnk/software.html               #
 #                                                                 #
 #    Yuri Boykov (yuri@csd.uwo.ca)                                #
-#    Vladimir Kolmogorov (vnk@cs.cornell.edu)                     #
-#    2001                                                         #
+#    Vladimir Kolmogorov (vnk@ist.ac.at)                          #
+#    2001-2006                                                    #
 #                                                                 #
 ###################################################################
 
 1. Introduction.
 
-This software library implements the maxflow algorithm
-described in
+This software library implements the maxflow algorithm described in
 
-	An Experimental Comparison of Min-Cut/Max-Flow Algorithms
-	for Energy Minimization in Vision.
+	"An Experimental Comparison of Min-Cut/Max-Flow Algorithms for Energy Minimization in Vision."
 	Yuri Boykov and Vladimir Kolmogorov.
 	In IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI), 
 	September 2004
@@ -28,62 +26,48 @@ it was later reimplemented by Vladimir Kolmogorov based on open publications.
 If you use this software for research purposes, you should cite
 the aforementioned paper in any resulting publication.
 
+----------------------------------------------------------------------
+
+REUSING TREES:
+
+Starting with version 3.0, there is a also an option of reusing search
+trees from one maxflow computation to the next, as described in
+
+	"Efficiently Solving Dynamic Markov Random Fields Using Graph Cuts."
+	Pushmeet Kohli and Philip H.S. Torr
+	International Conference on Computer Vision (ICCV), 2005
+
+If you use this option, you should cite
+the aforementioned paper in any resulting publication.
+
 Tested under windows, Visual C++ 6.0 compiler and unix (SunOS 5.8
 and RedHat Linux 7.0, GNU c++ compiler).
 
 ##################################################################
 
-2. License.
+2. License & disclaimer.
 
-    Copyright 2001 Vladimir Kolmogorov (vnk@cs.cornell.edu), Yuri Boykov (yuri@csd.uwo.ca).
+    Copyright 2001-2006 Vladimir Kolmogorov (v.kolmogorov@cs.ucl.ac.uk), Yuri Boykov (yuri@csd.uwo.ca).
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+    This software can be used for research purposes only.
+    If you require another license, you may consider using version 2.21
+    (which implements exactly the same algorithm, but does not have the option of reusing search trees).
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-##################################################################
-
-3. Graph representation.
-
-There are two versions of the algorithm using different
-graph representations (adjacency list and forward star).
-The former one uses more than twice as much memory as the
-latter one but is 10-20% faster.
-
-Memory allocation (assuming that all capacities are 'short' - 2 bytes):
-
-                 |   Nodes    |   Arcs
-------------------------------------------
-Adjacency list   | *24 bytes  | *14 bytes
-Forward star     | *28 bytes  |  6 bytes
-
-(* means that often it should be rounded up to be a multiple of 4
-- some compilers (e.g. Visual C++) seem to round up elements
-of arrays unless the are structures containing only char[].)
-
-Note that arcs are always added in pairs - in forward and reverse directions.
-Arcs between nodes and terminals (the source and the sink) are
-not stored as arcs, but rather as a part of nodes.
-
-The assumption for the forward star representation is that
-the maximum number of arcs per node (except the source
-and the sink) is much less than ARC_BLOCK_SIZE (1024 by default).
-
-Both versions have the same interface.
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ##################################################################
 
-4. Example usage.
+3. Example usage.
 
 This section shows how to use the library to compute
 a minimum cut on the following graph:
@@ -105,31 +89,35 @@ a minimum cut on the following graph:
 #include <stdio.h>
 #include "graph.h"
 
-void main()
+int main()
 {
-	Graph::node_id nodes[2];
-	Graph *g = new Graph();
+	typedef Graph<int,int,int> GraphType;
+	GraphType *g = new GraphType(/*estimated # of nodes*/ 2, /*estimated # of edges*/ 1); 
 
-	nodes[0] = g -> add_node();
-	nodes[1] = g -> add_node();
-	g -> set_tweights(nodes[0], 1, 5);
-	g -> set_tweights(nodes[1], 2, 6);
-	g -> add_edge(nodes[0], nodes[1], 3, 4);
+	g -> add_node(); 
+	g -> add_node(); 
 
-	Graph::flowtype flow = g -> maxflow();
+	g -> add_tweights( 0,   /* capacities */  1, 5 );
+	g -> add_tweights( 1,   /* capacities */  2, 6 );
+	g -> add_edge( 0, 1,    /* capacities */  3, 4 );
+
+	int flow = g -> maxflow();
 
 	printf("Flow = %d\n", flow);
 	printf("Minimum cut:\n");
-	if (g->what_segment(nodes[0]) == Graph::SOURCE)
+	if (g->what_segment(0) == GraphType::SOURCE)
 		printf("node0 is in the SOURCE set\n");
 	else
 		printf("node0 is in the SINK set\n");
-	if (g->what_segment(nodes[1]) == Graph::SOURCE)
+	if (g->what_segment(1) == GraphType::SOURCE)
 		printf("node1 is in the SOURCE set\n");
 	else
 		printf("node1 is in the SINK set\n");
 
 	delete g;
+
+	return 0;
 }
+
 
 ///////////////////////////////////////////////////

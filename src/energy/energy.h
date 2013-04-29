@@ -76,7 +76,7 @@
 #include <assert.h>
 #include "graph.h"
 
-class Energy : Graph
+class Energy : Graph<short,short,int>
 {
 public:
 	typedef node_id Var;
@@ -86,8 +86,8 @@ public:
 	   TotalValue is a type of a value of the total energy.
 	   By default Value = short, TotalValue = int.
 	   To change it, change the corresponding types in graph.h */
-	typedef captype Value;
-	typedef flowtype TotalValue;
+	typedef short Value;
+	typedef int TotalValue;
 
 	/* interface functions */
 
@@ -150,7 +150,7 @@ private:
 /************************  Implementation ******************************/
 /***********************************************************************/
 
-inline Energy::Energy(void (*err_function)(const char *)) : Graph(err_function)
+inline Energy::Energy(void (*err_function)(const char *)) : Graph(100,100,err_function)
 {
 	Econst = 0;
 	error_function = err_function;

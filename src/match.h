@@ -90,7 +90,7 @@ private:
 					im_color_right_min, im_color_right_max;
 	int			disp_base, disp_max, disp_size;	/* range of disparities */
 #define OCCLUDED 255
-	LongImage		x_left, x_right;
+	IntImage		x_left, x_right;
 	/*
 		disparity map
 		IMREF(x_..., p)==OCCLUDED means that 'p' is occluded
@@ -102,7 +102,7 @@ private:
 
 	/********* INTERNAL VARIABLES **************/
 	int				E;					/* current energy */
-	PtrImage vars0, varsA; /* Variables corresponding to nodes */
+	IntImage vars0, varsA; /* Variables corresponding to nodes */
 
 	/********* INTERNAL FUNCTIONS **************/
 

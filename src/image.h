@@ -52,7 +52,7 @@ typedef enum
 	IMAGE_GRAY,
 	IMAGE_SHORT,
 	IMAGE_RGB,
-	IMAGE_LONG,
+	IMAGE_INT,
 	IMAGE_PTR,
 	IMAGE_FLOAT,
 	IMAGE_DOUBLE,
@@ -71,7 +71,7 @@ typedef struct BinaryImage_st  { unsigned char                     *data; } *Bin
 typedef struct GrayImage_st    { unsigned char                     *data; } *GrayImage;
 typedef struct ShortImage_st   { short                             *data; } *ShortImage;
 typedef struct RGBImage_st     { struct { unsigned char r, g, b; } *data; } *RGBImage;
-typedef struct LongImage_st    { long                              *data; } *LongImage;
+typedef struct IntImage_st    { int                              *data; } *IntImage;
 typedef struct PtrImage_st     { void*                             *data; } *PtrImage;
 typedef struct FloatImage_st   { float                             *data; } *FloatImage;
 typedef struct DoubleImage_st  { double                            *data; } *DoubleImage;

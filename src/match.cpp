@@ -57,8 +57,8 @@ Match::Match(GeneralImage left, GeneralImage right, bool color)
 
 	disp_base = 0; disp_max = 0; disp_size = 1;
 
-	x_left  = (LongImage) imNew(IMAGE_LONG, im_size.x, im_size.y);
-	x_right = (LongImage) imNew(IMAGE_LONG, im_size.x, im_size.y);
+	x_left  = (IntImage) imNew(IMAGE_INT, im_size.x, im_size.y);
+	x_right = (IntImage) imNew(IMAGE_INT, im_size.x, im_size.y);
 	if (!x_left || !x_right)
         { std::cerr << "Not enough memory!" << std::endl; exit(1); }
 	
@@ -66,8 +66,8 @@ Match::Match(GeneralImage left, GeneralImage right, bool color)
 	for (p.x=0; p.x<im_size.x; p.x++)
         IMREF(x_left, p) = IMREF(x_right, p) = OCCLUDED;
 
-	vars0 = (PtrImage) imNew(IMAGE_PTR, im_size.x, im_size.y);
-	varsA = (PtrImage) imNew(IMAGE_PTR, im_size.x, im_size.y);
+	vars0 = (IntImage) imNew(IMAGE_INT, im_size.x, im_size.y);
+	varsA = (IntImage) imNew(IMAGE_INT, im_size.x, im_size.y);
 }
 
 Match::~Match()
@@ -226,6 +226,7 @@ void generate_permutation(int *buf, int n)
 void Match::Run()
 {
 	unsigned int seed = time(NULL);
+    seed=0; // ------------- DEBUG ----------------
 	printf("Random seed = %d\n", seed);
 	srand(seed);
 
@@ -269,6 +270,7 @@ void Match::Run()
 			step ++;
 			if(oldE == E) printf("-");
 			else printf("*");
+            printf("E=%d\n", E);
 			fflush(stdout);
 
 			if(oldE == E) {
