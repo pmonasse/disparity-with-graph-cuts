@@ -150,7 +150,7 @@ private:
 /************************  Implementation ******************************/
 /***********************************************************************/
 
-inline Energy::Energy(void (*err_function)(const char *)) : Graph(100,100,err_function)
+inline Energy::Energy(void (*err_function)(const char *)) : Graph(err_function)
 {
 	Econst = 0;
 	error_function = err_function;

@@ -16,23 +16,7 @@
 
 	If you use this software for research purposes, you should cite
 	the aforementioned paper in any resulting publication.
-
-	----------------------------------------------------------------------
-
-	REUSING TREES:
-
-	Starting with version 3.0, there is a also an option of reusing search
-	trees from one maxflow computation to the next, as described in
-
-		"Efficiently Solving Dynamic Markov Random Fields Using Graph Cuts."
-		Pushmeet Kohli and Philip H.S. Torr
-		International Conference on Computer Vision (ICCV), 2005
-
-	If you use this option, you should cite
-	the aforementioned paper in any resulting publication.
 */
-	
-
 
 /*
 	For description, license, example usage see README.TXT.
@@ -42,18 +26,13 @@
 #define GRAPH_H
 
 #include <string.h>
-#include "block.h"
-
 #include <assert.h>
-// NOTE: in UNIX you need to use -DNDEBUG preprocessor option to supress assert's!!!
-
-
+#include <vector>
+#include "block.h"
 
 // captype: type of edge capacities (excluding t-links)
 // tcaptype: type of t-links (edges between nodes and terminals)
 // flowtype: type of total flow
-//
-// Current instantiations are in instances.inc
 template <typename captype, typename tcaptype, typename flowtype> class Graph
 {
 public:
@@ -71,29 +50,18 @@ public:
 	/////////////////////////////////////////////////////////////////////////
 
 	// Constructor. 
-	// The first argument gives an estimate of the maximum number of nodes that can be added
-	// to the graph, and the second argument is an estimate of the maximum number of edges.
-	// The last (optional) argument is the pointer to the function which will be called 
+	// The argument is the pointer to a function which will be called 
 	// if an error occurs; an error message is passed to this function. 
 	// If this argument is omitted, exit(1) will be called.
-	//
-	// IMPORTANT: It is possible to add more nodes to the graph than node_num_max 
-	// (and node_num_max can be zero). However, if the count is exceeded, then 
-	// the internal memory is reallocated (increased by 50%) which is expensive. 
-	// Also, temporarily the amount of allocated memory would be more than twice than needed.
-	// Similarly for edges.
-	// If you wish to avoid this overhead, you can download version 2.2, where nodes and edges are stored in blocks.
-	Graph(int node_num_max, int edge_num_max, void (*err_function)(const char *) = NULL);
+	Graph(void (*err_function)(const char *) = NULL);
 
 	// Destructor
 	virtual ~Graph();
 
-	// Adds node to the graph. First call returns 0, second call returns 1, and so on. 
-	// IMPORTANT: see note about the constructor 
+	// Adds node to the graph. First call returns 0, second 1, and so on. 
 	node_id add_node();
 
-	// Adds a bidirectional edge between 'i' and 'j' with the weights 'cap' and 'rev_cap'.
-	// IMPORTANT: see note about the constructor 
+	// Adds two edges between 'i' and 'j' with the weights 'cap' and 'rev_cap'
 	void add_edge(node_id i, node_id j, captype cap, captype rev_cap);
 
 	// Adds new edges 'SOURCE->i' and 'i->SINK' with corresponding weights.
@@ -102,7 +70,6 @@ public:
 	// NOTE: the number of such edges is not counted in edge_num_max.
 	//       No internal memory is allocated by this call.
 	void add_tweights(node_id i, tcaptype cap_source, tcaptype cap_sink);
-
 
 	// Computes the maxflow. Can be called several times.
 	flowtype maxflow();
@@ -114,18 +81,15 @@ public:
 	// to both the source and the sink, then default_segm is returned.
 	termtype what_segment(node_id i, termtype default_segm = SOURCE);
 
-
-
 private:
 	struct node;
 	struct arc;
 
 	struct node
 	{
-		arc_id first; // first outcoming arc
-		arc* parent;  // node's parent
-		node* next;   // pointer to the next active node
-                      // (or to itself if it is the last node in the list)
+		arc_id first; // first outgoing arc
+		arc* parent;  // initial path to root (a terminal node) if in tree
+		node* next;   // pointer to the next active node (itself if last node)
 		int			TS;			// timestamp showing when DIST was computed
 		int			DIST;		// distance to the terminal
 		termtype	term;	// flag showing whether the node is in the source or in the sink tree (if parent!=NULL)
@@ -151,8 +115,8 @@ private:
 	};
 	static const int NODEPTR_BLOCK_SIZE = 128;
 
-	node				*nodes, *node_last, *node_max; // node_last = nodes+node_num, node_max = nodes+node_num_max;
-	arc					*arcs, *arc_last, *arc_max; // arc_last = arcs+2*edge_num, arc_max = arcs+2*edge_num_max;
+    std::vector<node> nodes;
+    std::vector<arc> arcs;
 
 	int					node_num;
 
@@ -171,9 +135,6 @@ private:
 	int					TIME;								// monotonically increasing global counter
 
 	/////////////////////////////////////////////////////////////////////////
-
-	void reallocate_nodes();
-	void reallocate_arcs();
 
 	// functions for processing active list
 	void set_active(node *i);
@@ -197,20 +158,15 @@ private:
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline typename Graph<captype,tcaptype,flowtype>::node_id Graph<captype,tcaptype,flowtype>::add_node()
 {
-	if (node_last==node_max) reallocate_nodes();
-	memset(node_last, 0, sizeof(node));
-    node_last->first = -1;
-
-	node_id i = node_num++;
-	++node_last;
+	node n = {-1, 0, 0, 0, 0, SOURCE, 0};
+	node_id i = static_cast<node_id>(nodes.size());
+    nodes.push_back(n);
 	return i;
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i, tcaptype cap_source, tcaptype cap_sink)
 {
-	assert(i >= 0 && i < node_num);
-
 	tcaptype delta = nodes[i].tr_cap;
 	if (delta > 0) cap_source += delta;
 	else           cap_sink   -= delta;
@@ -221,32 +177,19 @@ template <typename captype, typename tcaptype, typename flowtype>
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline void Graph<captype,tcaptype,flowtype>::add_edge(node_id _i, node_id _j, captype cap, captype rev_cap)
 {
-	assert(_i >= 0 && _i < node_num);
-	assert(_j >= 0 && _j < node_num);
 	assert(_i != _j);
 	assert(cap >= 0);
 	assert(rev_cap >= 0);
 
-	if (arc_last == arc_max) reallocate_arcs();
+    arc_id ij=static_cast<arc_id>(arcs.size()), ji=ij+1;
 
-    arc_id ij=arc_last-arcs;
-	arc *a = arc_last ++;
-    arc_id ji=arc_last-arcs;
-	arc *a_rev = arc_last ++;
+    arc a     = {_j, nodes[_i].first, ji, cap};
+    arc a_rev = {_i, nodes[_j].first, ij, rev_cap};
 
-	node* i = nodes + _i;
-	node* j = nodes + _j;
-
-	a->sister = ji;
-	a_rev->sister = ij;
-	a->next = i->first;
-	i->first = ij;
-	a_rev->next = j->first;
-	j->first = ji;
-	a->head = _j;
-	a_rev->head = _i;
-	a->r_cap = cap;
-	a_rev->r_cap = rev_cap;
+	nodes[_i].first = ij;
+	nodes[_j].first = ji;
+    arcs.push_back(a);
+    arcs.push_back(a_rev);
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 

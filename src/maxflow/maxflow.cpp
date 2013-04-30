@@ -77,15 +77,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 template <typename captype, typename tcaptype, typename flowtype> 
 	void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
-	node *i;
-
 	queue_first = queue_last = NULL;
 	orphan_first = NULL;
 
 	TIME = 0;
 
-	for (i=nodes; i<node_last; i++)
+    typename std::vector<node>::iterator it=nodes.begin();
+	for (; it!=nodes.end(); ++it)
 	{
+        node* i= &(*it);
 		i -> next = NULL;
 		i -> TS = TIME;
 		if (i->tr_cap > 0)
@@ -442,84 +442,6 @@ template <typename captype, typename tcaptype, typename flowtype>
     nodeptr_block = NULL; 
 
 	return flow;
-}
-
-/***********************************************************************/
-
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	void Graph<captype,tcaptype,flowtype>::test_consistency(node* current_node)
-{
-	node *i;
-	arc *a;
-	int r;
-	int num1 = 0, num2 = 0;
-
-	// test whether all nodes i with i->next!=NULL are indeed in the queue
-	for (i=nodes; i<node_last; i++)
-	{
-		if (i->next || i==current_node) num1 ++;
-	}
-	for (r=0; r<2; r++)
-	{
-		i = (r == 1) ? current_node : queue_first;
-		if (i)
-		for ( ; ; i=i->next)
-		{
-			num2 ++;
-			if (i->next == i)
-			{
-				if (r<1) assert(i == queue_last);
-				else     assert(i == current_node);
-				break;
-			}
-		}
-	}
-	assert(num1 == num2);
-
-	for (i=nodes; i<node_last; i++)
-	{
-		// test whether all edges in seach trees are non-saturated
-		if (i->parent == NULL) {}
-		else if (i->parent == ORPHAN) {}
-		else if (i->parent == TERMINAL)
-		{
-			if (i->term==SOURCE) assert(i->tr_cap > 0);
-			else             assert(i->tr_cap < 0);
-		}
-		else
-		{
-			if (i->term==SOURCE) assert (i->parent->sister->r_cap > 0);
-			else             assert (i->parent->r_cap > 0);
-		}
-		// test whether passive nodes in search trees have neighbors in
-		// a different tree through non-saturated edges
-		if (i->parent && !i->next)
-		{
-			if (i->term==SOURCE)
-			{
-				assert(i->tr_cap >= 0);
-				for (a=i->first; a; a=a->next)
-				{
-					if (a->r_cap > 0) assert(nodes[a->head]->parent && nodes[a->head]->term==SOURCE);
-				}
-			}
-			else
-			{
-				assert(i->tr_cap <= 0);
-				for (a=i->first; a; a=a->next)
-				{
-					if (a->sister->r_cap > 0) assert(nodes[a->head]->parent && nodes[a->head]->term==SINK);
-				}
-			}
-		}
-		// test marking invariants
-		if (i->parent && i->parent!=ORPHAN && i->parent!=TERMINAL)
-		{
-			assert(i->TS <= nodes[i->parent->head]->TS);
-			if (i->TS == nodes[i->parent->head]->TS) assert(i->DIST > nodes[i->parent->head]->DIST);
-		}
-	}
 }
 
 #undef TERMINAL
