@@ -101,11 +101,8 @@
 template <class Type> class Block
 {
 public:
-	/* Constructor. Arguments are the block size and
-	   (optionally) the pointer to the function which
-	   will be called if allocation failed; the message
-	   passed to this function is "Not enough memory!" */
-	Block(int size, void (*err_function)(const char *) = NULL) { first = last = NULL; block_size = size; error_function = err_function; }
+	/* Constructor. Argument is the block size */
+	Block(int size) { first = last = NULL; block_size = size; }
 
 	/* Destructor. Deallocates all items added so far */
 	~Block() { while (first) { block *next = first -> next; delete[] ((char*)first); first = next; } }
@@ -123,7 +120,6 @@ public:
 			else
 			{
 				block *next = (block *) new char [sizeof(block) + (block_size-1)*sizeof(Type)];
-				if (!next) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
 				if (last) last -> next = next;
 				else first = next;
 				last = next;
@@ -220,8 +216,6 @@ public:
 private:
 	block	*scan_current_block;
 	Type	*scan_current_data;
-
-	void	(*error_function)(const char *);
 };
 
 /***********************************************************************/
@@ -231,11 +225,8 @@ private:
 template <class Type> class DBlock
 {
 public:
-	/* Constructor. Arguments are the block size and
-	   (optionally) the pointer to the function which
-	   will be called if allocation failed; the message
-	   passed to this function is "Not enough memory!" */
-	DBlock(int size, void (*err_function)(const char *) = NULL) { first = NULL; first_free = NULL; block_size = size; error_function = err_function; }
+	/* Constructor. Arguments is the block size */
+	DBlock(int size) { first = NULL; first_free = NULL; block_size = size; }
 
 	/* Destructor. Deallocates all items added so far */
 	~DBlock() { while (first) { block *next = first -> next; delete[] ((char*)first); first = next; } }
@@ -249,7 +240,6 @@ public:
 		{
 			block *next = first;
 			first = (block *) new char [sizeof(block) + (block_size-1)*sizeof(block_item)];
-			if (!first) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
 			first_free = & (first -> data[0] );
 			for (item=first_free; item<first_free+block_size-1; item++)
 				item -> next_free = item + 1;
@@ -288,8 +278,6 @@ private:
 	int			block_size;
 	block		*first;
 	block_item	*first_free;
-
-	void	(*error_function)(const char *);
 };
 
 

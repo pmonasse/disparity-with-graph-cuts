@@ -169,7 +169,7 @@ void Match::build_uniqueness(Energy* e, Coord p, int a) {
 /* computes the minimum a-expansion configuration */
 void Match::ExpansionMove(int a)
 {	
-	Energy *e = new Energy(KZ2_error_function);
+	Energy *e = new Energy;
 
     // Build graph
 	Coord p;

@@ -91,11 +91,8 @@ public:
 
 	/* interface functions */
 
-	/* Constructor. Optional argument is the pointer to the
-	   function which will be called if an error occurs;
-	   an error message is passed to this function. If this
-	   argument is omitted, exit(1) will be called. */
-	Energy(void (*err_function)(const char *) = NULL);
+	/* Constructor. */
+	Energy();
 
 	/* Destructor */
 	~Energy();
@@ -141,19 +138,15 @@ private:
 	/* internal variables and functions */
 
 	TotalValue	Econst;
-	void		(*error_function)(const char *);	/* this function is called if a error occurs,
-											with a corresponding error message
-											(or exit(1) is called if it's NULL) */
 };
 
 /***********************************************************************/
 /************************  Implementation ******************************/
 /***********************************************************************/
 
-inline Energy::Energy(void (*err_function)(const char *)) : Graph(err_function)
+inline Energy::Energy() : Graph()
 {
 	Econst = 0;
-	error_function = err_function;
 }
 
 inline Energy::~Energy() {}
