@@ -1,14 +1,11 @@
-#ifdef __GRAPH_H__
+#ifdef GRAPH_H
 /* maxflow.cpp */
 
 #include <stdio.h>
 
-/*
-	special constants for node->parent. Duplicated in graph.cpp, both should match!
-*/
-#define TERMINAL ( (arc *) 1 )		/* to terminal */
-#define ORPHAN   ( (arc *) 2 )		/* orphan */
-
+/* special constants for node->parent */
+#define TERMINAL (arc*)1 /* arc to terminal */
+#define ORPHAN   (arc*)2 /* arc to orphan */
 
 #define INFINITE_D ((int)(((unsigned)-1)/2))		/* infinite distance to the terminal */
 
@@ -123,20 +120,23 @@ template <typename captype, typename tcaptype, typename flowtype>
 	/* 1. Finding bottleneck capacity */
 	/* 1a - the source tree */
 	bottleneck = middle_arc->r_cap;
-	i=middle_arc->sister->head;
+	i=arcs[middle_arc->sister].head;
 	do {
 		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
-		if (bottleneck > a->sister->r_cap) bottleneck = a->sister->r_cap;
+		if (bottleneck > arcs[a->sister].r_cap)
+            bottleneck = arcs[a->sister].r_cap;
         i = a->head;
 	} while(true);
-	if (bottleneck > nodes[i].tr_cap) bottleneck = nodes[i].tr_cap;
+	if (bottleneck > nodes[i].tr_cap)
+        bottleneck = nodes[i].tr_cap;
 	/* 1b - the sink tree */
 	i=middle_arc->head;
 	do {
 		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
-		if (bottleneck > a->r_cap) bottleneck = a->r_cap;
+		if (bottleneck > a->r_cap)
+            bottleneck = a->r_cap;
         i=a->head;
 	} while(true);
 	if (bottleneck > -nodes[i].tr_cap) bottleneck = -nodes[i].tr_cap;
@@ -144,15 +144,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 	/* 2. Augmenting */
 	flow += bottleneck;
 	/* 2a - the source tree */
-	middle_arc->sister->r_cap += bottleneck;
+	arcs[middle_arc->sister].r_cap += bottleneck;
 	middle_arc->r_cap -= bottleneck;
-	i=middle_arc->sister->head;
+	i=arcs[middle_arc->sister].head;
 	do {
 		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
 		a->r_cap += bottleneck;
-		a->sister->r_cap -= bottleneck;
-		if (!a->sister->r_cap)
+		arcs[a->sister].r_cap -= bottleneck;
+		if (!arcs[a->sister].r_cap)
 			set_orphan(&nodes[i]);
         i=a->head;
 	} while(true);
@@ -164,7 +164,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 	do {
 		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
-		a->sister->r_cap += bottleneck;
+		arcs[a->sister].r_cap += bottleneck;
 		a->r_cap -= bottleneck;
 		if (!a->r_cap)
 			set_orphan(&nodes[i]);
@@ -181,14 +181,14 @@ template <typename captype, typename tcaptype, typename flowtype>
 	void Graph<captype,tcaptype,flowtype>::process_source_orphan(node *i)
 {
 	node *j;
-	arc *a0, *a0_min = NULL, *a;
+	arc *a0_min = NULL, *a;
 	int d, d_min = INFINITE_D;
 
 	/* trying to find a new parent */
-	for (a0=i->first; a0; a0=a0->next)
-	if (a0->sister->r_cap)
+	for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
+	if (arcs[arcs[a0].sister].r_cap)
 	{
-		j = &nodes[a0->head];
+		j = &nodes[arcs[a0].head];
 		if (j->term==SOURCE && (a=j->parent))
 		{
 			/* checking the origin of j */
@@ -197,15 +197,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 			{
 				if (j->TS == TIME)
 				{
-					d += j -> DIST;
+					d += j->DIST;
 					break;
 				}
-				a = j -> parent;
+				a = j->parent;
 				d ++;
 				if (a==TERMINAL)
 				{
-					j -> TS = TIME;
-					j -> DIST = 1;
+					j->TS = TIME;
+					j->DIST = 1;
 					break;
 				}
 				if (a==ORPHAN) { d = INFINITE_D; break; }
@@ -215,14 +215,14 @@ template <typename captype, typename tcaptype, typename flowtype>
 			{
 				if (d<d_min)
 				{
-					a0_min = a0;
+					a0_min = &arcs[a0];
 					d_min = d;
 				}
 				/* set marks along the path */
-				for (j=&nodes[a0->head]; j->TS!=TIME; j=&nodes[j->parent->head])
+				for (j=&nodes[arcs[a0].head]; j->TS!=TIME; j=&nodes[j->parent->head])
 				{
-					j -> TS = TIME;
-					j -> DIST = d --;
+					j->TS = TIME;
+					j->DIST = d --;
 				}
 			}
 		}
@@ -230,23 +230,21 @@ template <typename captype, typename tcaptype, typename flowtype>
 
 	if ((i->parent = a0_min) != 0)
 	{
-		i -> TS = TIME;
-		i -> DIST = d_min + 1;
+		i->TS = TIME;
+		i->DIST = d_min + 1;
 	}
 	else
 	{
 		/* no parent is found */
 		/* process neighbors */
-		for (a0=i->first; a0; a0=a0->next)
+		for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
 		{
-			j = &nodes[a0->head];
+			j = &nodes[arcs[a0].head];
 			if (j->term==SOURCE && (a=j->parent))
 			{
-				if (a0->sister->r_cap) set_active(j);
+				if (arcs[arcs[a0].sister].r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
-				{
-					set_orphan(j); // add j to the end of the adoption list
-				}
+					set_orphan(j);
 			}
 		}
 	}
@@ -256,14 +254,14 @@ template <typename captype, typename tcaptype, typename flowtype>
 	void Graph<captype,tcaptype,flowtype>::process_sink_orphan(node *i)
 {
 	node *j;
-	arc *a0, *a0_min = NULL, *a;
+	arc *a0_min = NULL, *a;
 	int d, d_min = INFINITE_D;
 
 	/* trying to find a new parent */
-	for (a0=i->first; a0; a0=a0->next)
-	if (a0->r_cap)
+	for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
+	if (arcs[a0].r_cap)
 	{
-		j = &nodes[a0->head];
+		j = &nodes[arcs[a0].head];
 		if (j->term==SINK && (a=j->parent))
 		{
 			/* checking the origin of j */
@@ -272,15 +270,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 			{
 				if (j->TS == TIME)
 				{
-					d += j -> DIST;
+					d += j->DIST;
 					break;
 				}
-				a = j -> parent;
+				a = j->parent;
 				d ++;
 				if (a==TERMINAL)
 				{
-					j -> TS = TIME;
-					j -> DIST = 1;
+					j->TS = TIME;
+					j->DIST = 1;
 					break;
 				}
 				if (a==ORPHAN) { d = INFINITE_D; break; }
@@ -290,11 +288,11 @@ template <typename captype, typename tcaptype, typename flowtype>
 			{
 				if (d<d_min)
 				{
-					a0_min = a0;
+					a0_min = &arcs[a0];
 					d_min = d;
 				}
 				/* set marks along the path */
-				for (j=&nodes[a0->head]; j->TS!=TIME; j=&nodes[j->parent->head])
+				for (j=&nodes[arcs[a0].head]; j->TS!=TIME; j=&nodes[j->parent->head])
 				{
 					j -> TS = TIME;
 					j -> DIST = d --;
@@ -312,16 +310,14 @@ template <typename captype, typename tcaptype, typename flowtype>
 	{
 		/* no parent is found */
 		/* process neighbors */
-		for (a0=i->first; a0; a0=a0->next)
+		for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
 		{
-			j = &nodes[a0->head];
+			j = &nodes[arcs[a0].head];
 			if (j->term==SINK && (a=j->parent))
 			{
-				if (a0->r_cap) set_active(j);
+				if (arcs[a0].r_cap) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
-				{
-					set_orphan(j); // add j to the end of the adoption list
-				}
+					set_orphan(j);
 			}
 		}
 	}
@@ -333,8 +329,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	flowtype Graph<captype,tcaptype,flowtype>::maxflow()
 {
 	node *i, *j, *current_node = NULL;
-	arc *a;
-	nodeptr *np, *np_next;
 
     nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE, error_function);
 
@@ -350,23 +344,22 @@ template <typename captype, typename tcaptype, typename flowtype>
 			i -> next = NULL; /* remove active flag */
 			if (!i->parent) i = NULL;
 		}
-		if (!i)
-		{
-			if (!(i = next_active())) break;
-		}
+		if (!i && !(i=next_active()))
+            break;
 
+        arc_id a=-1;
 		/* growth */
 		if (i->term==SOURCE)
 		{
 			/* grow source tree */
-			for (a=i->first; a; a=a->next)
-			if (a->r_cap)
+			for (a=i->first; a>=0; a=arcs[a].next)
+			if (arcs[a].r_cap)
 			{
-				j = &nodes[a->head];
+				j = &nodes[arcs[a].head];
 				if (!j->parent)
 				{
 					j -> term = SOURCE;
-					j -> parent = a -> sister;
+					j -> parent = &arcs[arcs[a].sister];
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
@@ -376,7 +369,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 				         j->DIST > i->DIST)
 				{
 					/* heuristic - trying to make the distance from j to the source shorter */
-					j -> parent = a -> sister;
+					j -> parent = &arcs[arcs[a].sister];
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 				}
@@ -385,24 +378,24 @@ template <typename captype, typename tcaptype, typename flowtype>
 		else
 		{
 			/* grow sink tree */
-			for (a=i->first; a; a=a->next)
-			if (a->sister->r_cap)
+			for (a=i->first; a>=0; a=arcs[a].next)
+			if (arcs[arcs[a].sister].r_cap)
 			{
-				j = &nodes[a->head];
+				j = &nodes[arcs[a].head];
 				if (!j->parent)
 				{
 					j -> term = SINK;
-					j -> parent = a -> sister;
+					j -> parent = &arcs[arcs[a].sister];
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
 				}
-				else if (j->term==SOURCE) { a = a -> sister; break; }
+				else if (j->term==SOURCE) { a = arcs[a].sister; break; }
 				else if (j->TS <= i->TS &&
 				         j->DIST > i->DIST)
 				{
 					/* heuristic - trying to make the distance from j to the sink shorter */
-					j -> parent = a -> sister;
+					j -> parent = &arcs[arcs[a].sister];
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 				}
@@ -411,20 +404,21 @@ template <typename captype, typename tcaptype, typename flowtype>
 
 		TIME ++;
 
-		if (a)
+		if (a>=0)
 		{
 			i -> next = i; /* set active flag */
 			current_node = i;
 
 			/* augmentation */
-			augment(a);
+			augment(&arcs[a]);
 			/* augmentation end */
 
 			/* adoption */
-			while ((np=orphan_first))
+            nodeptr* np;
+			while ((np=orphan_first)!=0)
 			{
-				np_next = np -> next;
-				np -> next = NULL;
+				nodeptr* np_next = np->next;
+				np->next = NULL;
 
 				while ((np=orphan_first))
 				{
@@ -528,4 +522,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 	}
 }
 
+#undef TERMINAL
+#undef ORPHAN
 #endif

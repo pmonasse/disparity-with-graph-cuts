@@ -1,15 +1,9 @@
-#ifdef __GRAPH_H__
+#ifdef GRAPH_H
 /* graph.cpp */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*
-	special constants for node->parent. Duplicated in maxflow.cpp, both should match!
-*/
-#define TERMINAL ( (arc *) 1 )		/* to terminal */
-#define ORPHAN   ( (arc *) 2 )		/* orphan */
 
 template <typename captype, typename tcaptype, typename flowtype> 
 	Graph<captype, tcaptype, flowtype>::Graph(int node_num_max, int edge_num_max, void (*err_function)(const char *))
@@ -45,26 +39,19 @@ template <typename captype, typename tcaptype, typename flowtype>
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 
-	void Graph<captype,tcaptype,flowtype>::reallocate_nodes(int num)
+	void Graph<captype,tcaptype,flowtype>::reallocate_nodes()
 {
 	int node_num_max = (int)(node_max - nodes);
 	node* nodes_old = nodes;
 
 	node_num_max += node_num_max / 2;
-	if (node_num_max < node_num + num) node_num_max = node_num + num;
+	if (node_num_max < node_num + 1)
+        node_num_max = node_num + 1;
 	nodes = (node*) realloc(nodes_old, node_num_max*sizeof(node));
 	if (!nodes) { if (error_function) (*error_function)("Not enough memory!"); exit(1); }
 
 	node_last = nodes + node_num;
 	node_max = nodes + node_num_max;
-
-	if (nodes != nodes_old)
-	{
-		for (node* i=nodes; i<node_last; i++)
-		{
-			if (i->next) i->next = (node*) ((char*)i->next + (((char*) nodes) - ((char*) nodes_old)));
-		}
-	}
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 
@@ -80,22 +67,6 @@ template <typename captype, typename tcaptype, typename flowtype>
 
 	arc_last = arcs + arc_num;
 	arc_max = arcs + arc_num_max;
-
-	if (arcs != arcs_old)
-	{
-		node* i;
-		arc* a;
-		for (i=nodes; i<node_last; i++)
-		{
-			if (i->first) i->first = (arc*) ((char*)i->first + (((char*) arcs) - ((char*) arcs_old)));
-			if (i->parent && i->parent != ORPHAN && i->parent != TERMINAL) i->parent = (arc*) ((char*)i->parent + (((char*) arcs) - ((char*) arcs_old)));
-		}
-		for (a=arcs; a<arc_last; a++)
-		{
-			if (a->next) a->next = (arc*) ((char*)a->next + (((char*) arcs) - ((char*) arcs_old)));
-			a->sister = (arc*) ((char*)a->sister + (((char*) arcs) - ((char*) arcs_old)));
-		}
-	}
 }
 
 #endif

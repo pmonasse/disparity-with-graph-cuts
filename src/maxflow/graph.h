@@ -38,8 +38,8 @@
 	For description, license, example usage see README.TXT.
 */
 
-#ifndef __GRAPH_H__
-#define __GRAPH_H__
+#ifndef GRAPH_H
+#define GRAPH_H
 
 #include <string.h>
 #include "block.h"
@@ -88,10 +88,9 @@ public:
 	// Destructor
 	virtual ~Graph();
 
-	// Adds node(s) to the graph. By default, one node is added (num=1); then first call returns 0, second call returns 1, and so on. 
-	// If num>1, then several nodes are added, and node_id of the first one is returned.
+	// Adds node to the graph. First call returns 0, second call returns 1, and so on. 
 	// IMPORTANT: see note about the constructor 
-	node_id add_node(int num = 1);
+	node_id add_node();
 
 	// Adds a bidirectional edge between 'i' and 'j' with the weights 'cap' and 'rev_cap'.
 	// IMPORTANT: see note about the constructor 
@@ -123,11 +122,10 @@ private:
 
 	struct node
 	{
-		arc			*first;		// first outcoming arc
-
-		arc			*parent;	// node's parent
-		node		*next;		// pointer to the next active node
-								//   (or to itself if it is the last node in the list)
+		arc_id first; // first outcoming arc
+		arc* parent;  // node's parent
+		node* next;   // pointer to the next active node
+                      // (or to itself if it is the last node in the list)
 		int			TS;			// timestamp showing when DIST was computed
 		int			DIST;		// distance to the terminal
 		termtype	term;	// flag showing whether the node is in the source or in the sink tree (if parent!=NULL)
@@ -139,11 +137,11 @@ private:
 
 	struct arc
 	{
-		node_id		head;		// node the arc points to
-		arc			*next;		// next arc with the same originating node
-		arc			*sister;	// reverse arc
+		node_id	head;  // node the arc points to
+		arc_id next;   // next arc with the same originating node
+		arc_id sister; // reverse arc
 
-		captype		r_cap;		// residual capacity
+		captype	r_cap; // residual capacity
 	};
 
 	struct nodeptr
@@ -174,7 +172,7 @@ private:
 
 	/////////////////////////////////////////////////////////////////////////
 
-	void reallocate_nodes(int num); // num is the number of new nodes
+	void reallocate_nodes();
 	void reallocate_arcs();
 
 	// functions for processing active list
@@ -197,17 +195,14 @@ private:
 ///////////////////////////////////////
 
 template <typename captype, typename tcaptype, typename flowtype> 
-	inline typename Graph<captype,tcaptype,flowtype>::node_id Graph<captype,tcaptype,flowtype>::add_node(int num)
+	inline typename Graph<captype,tcaptype,flowtype>::node_id Graph<captype,tcaptype,flowtype>::add_node()
 {
-	assert(num > 0);
+	if (node_last==node_max) reallocate_nodes();
+	memset(node_last, 0, sizeof(node));
+    node_last->first = -1;
 
-	if (node_last + num > node_max) reallocate_nodes(num);
-
-	memset(node_last, 0, num*sizeof(node));
-
-	node_id i = node_num;
-	node_num += num;
-	node_last += num;
+	node_id i = node_num++;
+	++node_last;
 	return i;
 }
 
@@ -234,35 +229,30 @@ template <typename captype, typename tcaptype, typename flowtype>
 
 	if (arc_last == arc_max) reallocate_arcs();
 
+    arc_id ij=arc_last-arcs;
 	arc *a = arc_last ++;
+    arc_id ji=arc_last-arcs;
 	arc *a_rev = arc_last ++;
 
 	node* i = nodes + _i;
 	node* j = nodes + _j;
 
-	a -> sister = a_rev;
-	a_rev -> sister = a;
-	a -> next = i -> first;
-	i -> first = a;
-	a_rev -> next = j -> first;
-	j -> first = a_rev;
-	a -> head = _j;
-	a_rev -> head = _i;
-	a -> r_cap = cap;
-	a_rev -> r_cap = rev_cap;
+	a->sister = ji;
+	a_rev->sister = ij;
+	a->next = i->first;
+	i->first = ij;
+	a_rev->next = j->first;
+	j->first = ji;
+	a->head = _j;
+	a_rev->head = _i;
+	a->r_cap = cap;
+	a_rev->r_cap = rev_cap;
 }
 
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline typename Graph<captype,tcaptype,flowtype>::termtype Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype default_segm)
 {
-	if (nodes[i].parent)
-	{
-		return nodes[i].term;
-	}
-	else
-	{
-		return default_segm;
-	}
+	return (nodes[i].parent? nodes[i].term: default_segm);
 }
 
 #include "graph.cpp"
