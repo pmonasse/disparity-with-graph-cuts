@@ -63,6 +63,7 @@ public:
 		SINK	= 1
 	} termtype; // terminals 
 	typedef int node_id;
+    typedef int arc_id;
 
 	/////////////////////////////////////////////////////////////////////////
 	//                     BASIC INTERFACE FUNCTIONS                       //
@@ -116,61 +117,9 @@ public:
 
 
 
-	//////////////////////////////////////////////
-	//       ADVANCED INTERFACE FUNCTIONS       //
-	//      (provide access to the graph)       //
-	//////////////////////////////////////////////
-
 private:
 	struct node;
 	struct arc;
-
-public:
-
-	////////////////////////////////////////////////////////////////////////////////
-	// 2. Functions for getting pointers to arcs and for reading graph structure. //
-	//    NOTE: adding new arcs may invalidate these pointers (if reallocation    //
-	//    happens). So it's best not to add arcs while reading graph structure.   //
-	////////////////////////////////////////////////////////////////////////////////
-
-	// The following two functions return arcs in the same order that they
-	// were added to the graph. NOTE: for each call add_edge(i,j,cap,cap_rev)
-	// the first arc returned will be i->j, and the second j->i.
-	// If there are no more arcs, then the function can still be called, but
-	// the returned arc_id is undetermined.
-	typedef arc* arc_id;
-	arc_id get_first_arc();
-	arc_id get_next_arc(arc_id a);
-
-	// other functions for reading graph structure
-	int get_node_num() { return node_num; }
-	int get_arc_num() { return (int)(arc_last - arcs); }
-	void get_arc_ends(arc_id a, node_id& i, node_id& j); // returns i,j to that a = i->j
-
-	///////////////////////////////////////////////////
-	// 3. Functions for reading residual capacities. //
-	///////////////////////////////////////////////////
-
-	// returns residual capacity of SOURCE->i minus residual capacity of i->SINK
-	tcaptype get_trcap(node_id i); 
-	// returns residual capacity of arc a
-	captype get_rcap(arc* a);
-
-	/////////////////////////////////////////////////////////////////
-	// 4. Functions for setting residual capacities.               //
-	//    NOTE: If these functions are used, the value of the flow //
-	//    returned by maxflow() will not be valid!                 //
-	/////////////////////////////////////////////////////////////////
-
-	void set_trcap(node_id i, tcaptype trcap); 
-	void set_rcap(arc* a, captype rcap);
-
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
-	
-private:
-	// internal variables and functions
 
 	struct node
 	{
@@ -181,7 +130,7 @@ private:
 								//   (or to itself if it is the last node in the list)
 		int			TS;			// timestamp showing when DIST was computed
 		int			DIST;		// distance to the terminal
-		int			is_sink : 1;	// flag showing whether the node is in the source or in the sink tree (if parent!=NULL)
+		termtype	term;	// flag showing whether the node is in the source or in the sink tree (if parent!=NULL)
 
 		tcaptype	tr_cap;		// if tr_cap > 0 then tr_cap is residual capacity of the arc SOURCE->node
 								// otherwise         -tr_cap is residual capacity of the arc node->SINK 
@@ -190,7 +139,7 @@ private:
 
 	struct arc
 	{
-		node		*head;		// node the arc points to
+		node_id		head;		// node the arc points to
 		arc			*next;		// next arc with the same originating node
 		arc			*sister;	// reverse arc
 
@@ -297,67 +246,18 @@ template <typename captype, typename tcaptype, typename flowtype>
 	i -> first = a;
 	a_rev -> next = j -> first;
 	j -> first = a_rev;
-	a -> head = j;
-	a_rev -> head = i;
+	a -> head = _j;
+	a_rev -> head = _i;
 	a -> r_cap = cap;
 	a_rev -> r_cap = rev_cap;
 }
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline typename Graph<captype,tcaptype,flowtype>::arc* Graph<captype,tcaptype,flowtype>::get_first_arc()
-{
-	return arcs;
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline typename Graph<captype,tcaptype,flowtype>::arc* Graph<captype,tcaptype,flowtype>::get_next_arc(arc* a) 
-{
-	return a + 1; 
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::get_arc_ends(arc* a, node_id& i, node_id& j)
-{
-	assert(a >= arcs && a < arc_last);
-	i = (node_id) (a->sister->head - nodes);
-	j = (node_id) (a->head - nodes);
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline tcaptype Graph<captype,tcaptype,flowtype>::get_trcap(node_id i)
-{
-	assert(i>=0 && i<node_num);
-	return nodes[i].tr_cap;
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline captype Graph<captype,tcaptype,flowtype>::get_rcap(arc* a)
-{
-	assert(a >= arcs && a < arc_last);
-	return a->r_cap;
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::set_trcap(node_id i, tcaptype trcap)
-{
-	assert(i>=0 && i<node_num); 
-	nodes[i].tr_cap = trcap;
-}
-
-template <typename captype, typename tcaptype, typename flowtype> 
-	inline void Graph<captype,tcaptype,flowtype>::set_rcap(arc* a, captype rcap)
-{
-	assert(a >= arcs && a < arc_last);
-	a->r_cap = rcap;
-}
-
 
 template <typename captype, typename tcaptype, typename flowtype> 
 	inline typename Graph<captype,tcaptype,flowtype>::termtype Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype default_segm)
 {
 	if (nodes[i].parent)
 	{
-		return (nodes[i].is_sink) ? SINK : SOURCE;
+		return nodes[i].term;
 	}
 	else
 	{

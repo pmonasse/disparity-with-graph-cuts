@@ -94,7 +94,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 		if (i->tr_cap > 0)
 		{
 			/* i is connected to the source */
-			i -> is_sink = 0;
+			i -> term = SOURCE;
 			i -> parent = TERMINAL;
 			set_active(i);
 			i -> DIST = 1;
@@ -102,7 +102,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 		else if (i->tr_cap < 0)
 		{
 			/* i is connected to the sink */
-			i -> is_sink = 1;
+			i -> term = SINK;
 			i -> parent = TERMINAL;
 			set_active(i);
 			i -> DIST = 1;
@@ -117,71 +117,62 @@ template <typename captype, typename tcaptype, typename flowtype>
 template <typename captype, typename tcaptype, typename flowtype> 
 	void Graph<captype,tcaptype,flowtype>::augment(arc *middle_arc)
 {
-	node *i;
-	arc *a;
+    node_id i;
 	tcaptype bottleneck;
-
 
 	/* 1. Finding bottleneck capacity */
 	/* 1a - the source tree */
-	bottleneck = middle_arc -> r_cap;
-	for (i=middle_arc->sister->head; ; i=a->head)
-	{
-		a = i -> parent;
+	bottleneck = middle_arc->r_cap;
+	i=middle_arc->sister->head;
+	do {
+		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
-		if (bottleneck > a->sister->r_cap) bottleneck = a -> sister -> r_cap;
-	}
-	if (bottleneck > i->tr_cap) bottleneck = i -> tr_cap;
+		if (bottleneck > a->sister->r_cap) bottleneck = a->sister->r_cap;
+        i = a->head;
+	} while(true);
+	if (bottleneck > nodes[i].tr_cap) bottleneck = nodes[i].tr_cap;
 	/* 1b - the sink tree */
-	for (i=middle_arc->head; ; i=a->head)
-	{
-		a = i -> parent;
+	i=middle_arc->head;
+	do {
+		arc* a = nodes[i].parent;
 		if (a == TERMINAL) break;
-		if (bottleneck > a->r_cap) bottleneck = a -> r_cap;
-	}
-	if (bottleneck > - i->tr_cap) bottleneck = - i -> tr_cap;
-
+		if (bottleneck > a->r_cap) bottleneck = a->r_cap;
+        i=a->head;
+	} while(true);
+	if (bottleneck > -nodes[i].tr_cap) bottleneck = -nodes[i].tr_cap;
 
 	/* 2. Augmenting */
-	/* 2a - the source tree */
-	middle_arc -> sister -> r_cap += bottleneck;
-	middle_arc -> r_cap -= bottleneck;
-	for (i=middle_arc->sister->head; ; i=a->head)
-	{
-		a = i -> parent;
-		if (a == TERMINAL) break;
-		a -> r_cap += bottleneck;
-		a -> sister -> r_cap -= bottleneck;
-		if (!a->sister->r_cap)
-		{
-			set_orphan(i); // add i to the beginning of the adoption list
-		}
-	}
-	i -> tr_cap -= bottleneck;
-	if (!i->tr_cap)
-	{
-		set_orphan(i); // add i to the beginning of the adoption list
-	}
-	/* 2b - the sink tree */
-	for (i=middle_arc->head; ; i=a->head)
-	{
-		a = i -> parent;
-		if (a == TERMINAL) break;
-		a -> sister -> r_cap += bottleneck;
-		a -> r_cap -= bottleneck;
-		if (!a->r_cap)
-		{
-			set_orphan(i); // add i to the beginning of the adoption list
-		}
-	}
-	i -> tr_cap += bottleneck;
-	if (!i->tr_cap)
-	{
-		set_orphan(i); // add i to the beginning of the adoption list
-	}
-
-
 	flow += bottleneck;
+	/* 2a - the source tree */
+	middle_arc->sister->r_cap += bottleneck;
+	middle_arc->r_cap -= bottleneck;
+	i=middle_arc->sister->head;
+	do {
+		arc* a = nodes[i].parent;
+		if (a == TERMINAL) break;
+		a->r_cap += bottleneck;
+		a->sister->r_cap -= bottleneck;
+		if (!a->sister->r_cap)
+			set_orphan(&nodes[i]);
+        i=a->head;
+	} while(true);
+	nodes[i].tr_cap -= bottleneck;
+	if (!nodes[i].tr_cap)
+		set_orphan(&nodes[i]);
+	/* 2b - the sink tree */
+	i=middle_arc->head;
+	do {
+		arc* a = nodes[i].parent;
+		if (a == TERMINAL) break;
+		a->sister->r_cap += bottleneck;
+		a->r_cap -= bottleneck;
+		if (!a->r_cap)
+			set_orphan(&nodes[i]);
+        i=a->head;
+	} while(true);
+	nodes[i].tr_cap += bottleneck;
+	if (!nodes[i].tr_cap)
+		set_orphan(&nodes[i]);
 }
 
 /***********************************************************************/
@@ -197,8 +188,8 @@ template <typename captype, typename tcaptype, typename flowtype>
 	for (a0=i->first; a0; a0=a0->next)
 	if (a0->sister->r_cap)
 	{
-		j = a0 -> head;
-		if (!j->is_sink && (a=j->parent))
+		j = &nodes[a0->head];
+		if (j->term==SOURCE && (a=j->parent))
 		{
 			/* checking the origin of j */
 			d = 0;
@@ -218,7 +209,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 					break;
 				}
 				if (a==ORPHAN) { d = INFINITE_D; break; }
-				j = a -> head;
+				j = &nodes[a->head];
 			}
 			if (d<INFINITE_D) /* j originates from the source - done */
 			{
@@ -228,7 +219,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 					d_min = d;
 				}
 				/* set marks along the path */
-				for (j=a0->head; j->TS!=TIME; j=j->parent->head)
+				for (j=&nodes[a0->head]; j->TS!=TIME; j=&nodes[j->parent->head])
 				{
 					j -> TS = TIME;
 					j -> DIST = d --;
@@ -248,11 +239,11 @@ template <typename captype, typename tcaptype, typename flowtype>
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
 		{
-			j = a0 -> head;
-			if (!j->is_sink && (a=j->parent))
+			j = &nodes[a0->head];
+			if (j->term==SOURCE && (a=j->parent))
 			{
 				if (a0->sister->r_cap) set_active(j);
-				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
+				if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
 				{
 					set_orphan(j); // add j to the end of the adoption list
 				}
@@ -272,8 +263,8 @@ template <typename captype, typename tcaptype, typename flowtype>
 	for (a0=i->first; a0; a0=a0->next)
 	if (a0->r_cap)
 	{
-		j = a0 -> head;
-		if (j->is_sink && (a=j->parent))
+		j = &nodes[a0->head];
+		if (j->term==SINK && (a=j->parent))
 		{
 			/* checking the origin of j */
 			d = 0;
@@ -293,7 +284,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 					break;
 				}
 				if (a==ORPHAN) { d = INFINITE_D; break; }
-				j = a -> head;
+				j = &nodes[a->head];
 			}
 			if (d<INFINITE_D) /* j originates from the sink - done */
 			{
@@ -303,7 +294,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 					d_min = d;
 				}
 				/* set marks along the path */
-				for (j=a0->head; j->TS!=TIME; j=j->parent->head)
+				for (j=&nodes[a0->head]; j->TS!=TIME; j=&nodes[j->parent->head])
 				{
 					j -> TS = TIME;
 					j -> DIST = d --;
@@ -323,11 +314,11 @@ template <typename captype, typename tcaptype, typename flowtype>
 		/* process neighbors */
 		for (a0=i->first; a0; a0=a0->next)
 		{
-			j = a0 -> head;
-			if (j->is_sink && (a=j->parent))
+			j = &nodes[a0->head];
+			if (j->term==SINK && (a=j->parent))
 			{
 				if (a0->r_cap) set_active(j);
-				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
+				if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
 				{
 					set_orphan(j); // add j to the end of the adoption list
 				}
@@ -365,22 +356,22 @@ template <typename captype, typename tcaptype, typename flowtype>
 		}
 
 		/* growth */
-		if (!i->is_sink)
+		if (i->term==SOURCE)
 		{
 			/* grow source tree */
 			for (a=i->first; a; a=a->next)
 			if (a->r_cap)
 			{
-				j = a -> head;
+				j = &nodes[a->head];
 				if (!j->parent)
 				{
-					j -> is_sink = 0;
+					j -> term = SOURCE;
 					j -> parent = a -> sister;
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
 				}
-				else if (j->is_sink) break;
+				else if (j->term==SINK) break;
 				else if (j->TS <= i->TS &&
 				         j->DIST > i->DIST)
 				{
@@ -397,16 +388,16 @@ template <typename captype, typename tcaptype, typename flowtype>
 			for (a=i->first; a; a=a->next)
 			if (a->sister->r_cap)
 			{
-				j = a -> head;
+				j = &nodes[a->head];
 				if (!j->parent)
 				{
-					j -> is_sink = 1;
+					j -> term = SINK;
 					j -> parent = a -> sister;
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
 					set_active(j);
 				}
-				else if (!j->is_sink) { a = a -> sister; break; }
+				else if (j->term==SOURCE) { a = a -> sister; break; }
 				else if (j->TS <= i->TS &&
 				         j->DIST > i->DIST)
 				{
@@ -441,7 +432,7 @@ template <typename captype, typename tcaptype, typename flowtype>
 					i = np -> ptr;
 					nodeptr_block -> Delete(np);
 					if (!orphan_first) orphan_last = NULL;
-					if (i->is_sink) process_sink_orphan(i);
+					if (i->term==SINK) process_sink_orphan(i);
 					else            process_source_orphan(i);
 				}
 
@@ -499,24 +490,24 @@ template <typename captype, typename tcaptype, typename flowtype>
 		else if (i->parent == ORPHAN) {}
 		else if (i->parent == TERMINAL)
 		{
-			if (!i->is_sink) assert(i->tr_cap > 0);
+			if (i->term==SOURCE) assert(i->tr_cap > 0);
 			else             assert(i->tr_cap < 0);
 		}
 		else
 		{
-			if (!i->is_sink) assert (i->parent->sister->r_cap > 0);
+			if (i->term==SOURCE) assert (i->parent->sister->r_cap > 0);
 			else             assert (i->parent->r_cap > 0);
 		}
 		// test whether passive nodes in search trees have neighbors in
 		// a different tree through non-saturated edges
 		if (i->parent && !i->next)
 		{
-			if (!i->is_sink)
+			if (i->term==SOURCE)
 			{
 				assert(i->tr_cap >= 0);
 				for (a=i->first; a; a=a->next)
 				{
-					if (a->r_cap > 0) assert(a->head->parent && !a->head->is_sink);
+					if (a->r_cap > 0) assert(nodes[a->head]->parent && nodes[a->head]->term==SOURCE);
 				}
 			}
 			else
@@ -524,15 +515,15 @@ template <typename captype, typename tcaptype, typename flowtype>
 				assert(i->tr_cap <= 0);
 				for (a=i->first; a; a=a->next)
 				{
-					if (a->sister->r_cap > 0) assert(a->head->parent && a->head->is_sink);
+					if (a->sister->r_cap > 0) assert(nodes[a->head]->parent && nodes[a->head]->term==SINK);
 				}
 			}
 		}
 		// test marking invariants
 		if (i->parent && i->parent!=ORPHAN && i->parent!=TERMINAL)
 		{
-			assert(i->TS <= i->parent->head->TS);
-			if (i->TS == i->parent->head->TS) assert(i->DIST > i->parent->head->DIST);
+			assert(i->TS <= nodes[i->parent->head]->TS);
+			if (i->TS == nodes[i->parent->head]->TS) assert(i->DIST > nodes[i->parent->head]->DIST);
 		}
 	}
 }
