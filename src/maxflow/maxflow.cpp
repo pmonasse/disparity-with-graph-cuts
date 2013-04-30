@@ -172,7 +172,8 @@ void Graph<captype,tcaptype,flowtype>::process_source_orphan(node* i)
                         d_min = d;
                     }
                     /* set marks along the path */
-                    for (j=&nodes[arcs[a0].head]; j->TS!=TIME; j=&nodes[j->parent->head]) {
+                    for (j=&nodes[arcs[a0].head]; j->TS!=TIME;
+                         j=&nodes[j->parent->head]) {
                         j->TS = TIME;
                         j->DIST = d --;
                     }
@@ -231,7 +232,8 @@ void Graph<captype,tcaptype,flowtype>::process_sink_orphan(node *i)
                         d_min = d;
                     }
                     /* set marks along the path */
-                    for (j=&nodes[arcs[a0].head]; j->TS!=TIME; j=&nodes[j->parent->head]) {
+                    for (j=&nodes[arcs[a0].head]; j->TS!=TIME;
+                         j=&nodes[j->parent->head]) {
                         j->TS = TIME;
                         j->DIST = d --;
                     }
