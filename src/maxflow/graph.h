@@ -96,6 +96,8 @@ private:
     void maxflow_init();
     int dist_to_root(node* j);
     arc* grow_tree(node* i);
+    captype find_bottleneck(arc* midarc);
+    void push_flow(arc* midarc, captype f);
     void augment(arc* middle_arc);
 };
 

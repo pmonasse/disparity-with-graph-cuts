@@ -8,7 +8,7 @@
 
 /// Mark node as active.
 /// i->next points to the next active node (or itself, if last).
-/// i->next is 0 iff i is not in the list.
+/// i->next is 0 iff i should not be considered in the list.
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::set_active(node* i)
 {
@@ -74,67 +74,88 @@ void Graph<captype,tcaptype,flowtype>::maxflow_init()
     }
 }
 
-/// Push flow through path from source to sink passing through middle_arc.
+/// Find max flow that we can push from source to sink through midarc.
+/// midarc must be oriented from source tree to sink tree.
 template <typename captype, typename tcaptype, typename flowtype>
-void Graph<captype,tcaptype,flowtype>::augment(arc* middle_arc)
+captype Graph<captype,tcaptype,flowtype>::find_bottleneck(arc* midarc)
 {
-    /* 1. Finding bottleneck capacity */
-    /* 1a - the source tree */
-    tcaptype bottleneck = middle_arc->cap;
-    node_id i=arcs[middle_arc->sister].head;
+    captype cap = midarc->cap;
+
+    // source tree
+    node_id i=arcs[midarc->sister].head;
     do {
         arc* a = nodes[i].parent;
         if (a == TERMINAL) break;
-        if (bottleneck > arcs[a->sister].cap)
-            bottleneck = arcs[a->sister].cap;
+        if (cap > arcs[a->sister].cap)
+            cap = arcs[a->sister].cap;
         i = a->head;
     } while(true);
-    if (bottleneck > nodes[i].cap)
-        bottleneck = nodes[i].cap;
-    /* 1b - the sink tree */
-    i=middle_arc->head;
+    if (cap > nodes[i].cap)
+        cap = nodes[i].cap;
+
+    // sink tree
+    i=midarc->head;
     do {
         arc* a = nodes[i].parent;
         if (a == TERMINAL) break;
-        if (bottleneck > a->cap)
-            bottleneck = a->cap;
+        if (cap > a->cap)
+            cap = a->cap;
         i=a->head;
     } while(true);
-    if (bottleneck > -nodes[i].cap)
-        bottleneck = -nodes[i].cap;
+    if (cap > -nodes[i].cap)
+        cap = -nodes[i].cap;
 
-    /* 2. Augmenting */
-    flow += bottleneck;
-    /* 2a - the source tree */
-    arcs[middle_arc->sister].cap += bottleneck;
-    middle_arc->cap -= bottleneck;
-    i=arcs[middle_arc->sister].head;
+    return cap;
+}
+
+/// Push flow f through path from source to sink through midarc.
+template <typename captype, typename tcaptype, typename flowtype>
+void Graph<captype,tcaptype,flowtype>::push_flow(arc* midarc, captype f)
+{
+    flow += f;
+    // source tree
+    arcs[midarc->sister].cap += f;
+    midarc->cap -= f;
+    node_id i=arcs[midarc->sister].head;
     do {
         arc* a = nodes[i].parent;
         if (a == TERMINAL) break;
-        a->cap += bottleneck;
-        arcs[a->sister].cap -= bottleneck;
+        a->cap += f;
+        arcs[a->sister].cap -= f;
         if (!arcs[a->sister].cap)
             set_orphan(&nodes[i]);
         i=a->head;
     } while(true);
-    nodes[i].cap -= bottleneck;
+    nodes[i].cap -= f;
     if (!nodes[i].cap)
         set_orphan(&nodes[i]);
-    /* 2b - the sink tree */
-    i=middle_arc->head;
+
+    // sink tree
+    i=midarc->head;
     do {
         arc* a = nodes[i].parent;
         if (a == TERMINAL) break;
-        arcs[a->sister].cap += bottleneck;
-        a->cap -= bottleneck;
+        arcs[a->sister].cap += f;
+        a->cap -= f;
         if (!a->cap)
             set_orphan(&nodes[i]);
         i=a->head;
     } while(true);
-    nodes[i].cap += bottleneck;
+    nodes[i].cap += f;
     if (!nodes[i].cap)
         set_orphan(&nodes[i]);
+}
+
+/// Push flow through path from source to sink passing through midarc.
+template <typename captype, typename tcaptype, typename flowtype>
+void Graph<captype,tcaptype,flowtype>::augment(arc* midarc)
+{
+    // Orient arc from source tree to sink tree
+    if(nodes[midarc->head].term==SOURCE)
+        midarc = &arcs[midarc->sister];
+
+    captype bottleneck = find_bottleneck(midarc);
+    push_flow(midarc, bottleneck);
 }
 
 /// Extend the tree to neighbor nodes of tree leaf i. If doing so reaches the
@@ -153,8 +174,6 @@ Graph<captype,tcaptype,flowtype>::grow_tree(node* i)
                 j->dist = i->dist + 1;
                 set_active(j);
             } else if (j->term!=i->term) {
-                if(i->term==SINK)
-                    a = arcs[a].sister;
                 return &arcs[a];
             } else if (j->ts<=i->ts && j->dist>i->dist) {
                 // heuristic: try shortening distance from j to terminal
