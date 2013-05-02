@@ -25,7 +25,7 @@
 #include <string.h>
 #include <assert.h>
 #include <vector>
-#include "block.h"
+#include <queue>
 
 // captype: type of edge capacities (excluding t-links)
 // tcaptype: type of t-links (edges between nodes and terminals)
@@ -68,20 +68,12 @@ private:
         captype cap;   // residual capacity
     };
 
-    struct nodeptr {
-        node* ptr;
-        nodeptr* next;
-    };
-
     std::vector<node> nodes;
     std::vector<arc> arcs;
 
     flowtype flow; // total flow
-
-    node *queue_first, *queue_last; // list of active nodes
-    static const int NODEPTR_BLOCK_SIZE = 128;
-    DBlock<nodeptr>* nodeptr_block;
-    nodeptr *orphan_first, *orphan_last; // list of pointers to orphans
+    node *activeBegin, *activeEnd; // list of active nodes
+    std::queue<node*> orphans; // list of pointers to orphans
     int time; // monotonically increasing global counter
 
     // functions for processing active list

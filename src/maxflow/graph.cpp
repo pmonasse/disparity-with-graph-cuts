@@ -6,16 +6,13 @@
 /// If this argument is omitted, exit(1) will be called.
 template <typename captype, typename tcaptype, typename flowtype> 
 Graph<captype, tcaptype, flowtype>::Graph()
-: nodes(), arcs(), flow(0),
-  queue_first(0),queue_last(0), nodeptr_block(0), orphan_first(0),orphan_last(0)
+: nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0)
 {}
 
 /// Destructor
 template <typename captype, typename tcaptype, typename flowtype> 
 Graph<captype,tcaptype,flowtype>::~Graph()
-{
-    delete nodeptr_block;
-}
+{}
 
 /// Add node to the graph. First call returns 0, second 1, and so on. 
 template <typename captype, typename tcaptype, typename flowtype> 

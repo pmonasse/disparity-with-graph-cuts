@@ -13,10 +13,12 @@ template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::set_active(node* i)
 {
     if (!i->next) { // not yet in the list
-        if (queue_last) queue_last->next = i;
-        else            queue_first        = i;
-        queue_last = i;
         i->next = i;
+        if (activeEnd)
+            activeEnd->next = i;
+        else
+            activeBegin = i;
+        activeEnd = i;
     }
 }
 
@@ -26,11 +28,11 @@ typename Graph<captype,tcaptype,flowtype>::node*
 Graph<captype,tcaptype,flowtype>::next_active()
 {
     while (true) {
-        node* i=queue_first;
+        node* i=activeBegin;
         if (!i)
             return 0;
-        if (i->next == i) queue_first = queue_last = 0;
-        else              queue_first = i->next;
+        if (i->next == i) activeBegin = activeEnd = 0;
+        else              activeBegin = i->next;
         i->next = 0;
         if (i->parent) return i; // active iff it has a parent
     }
@@ -41,21 +43,14 @@ template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::set_orphan(node* i)
 {
     i->parent = ORPHAN;
-    nodeptr* np = nodeptr_block->New();
-    np->ptr = i;
-    np->next = 0;
-    if (orphan_last) orphan_last->next = np;
-    else             orphan_first      = np;
-    orphan_last = np;
+    orphans.push(i);
 }
 
 /// Set active nodes at distance 1 from a terminal node.
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
-    queue_first = queue_last = 0;
-    orphan_first = 0;
-
+    activeBegin=activeEnd=0;
     time = 0;
 
     typename std::vector<node>::iterator it=nodes.begin();
@@ -247,20 +242,10 @@ void Graph<captype,tcaptype,flowtype>::process_orphan(node* i)
 template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::adopt_orphans()
 {
-    nodeptr* np;
-    while ((np=orphan_first)!=0) {
-        nodeptr* np_next = np->next;
-        np->next = 0;
-
-        while ((np=orphan_first)) {
-            node* i = np->ptr;
-            orphan_first = np->next;
-            nodeptr_block->Delete(np);
-            if (!orphan_first) orphan_last = 0;
-            process_orphan(i);
-        }
-
-        orphan_first = np_next;
+    while(! orphans.empty()) {
+        node* i = orphans.front();
+        orphans.pop();
+        process_orphan(i);
     }
 }
 
@@ -268,11 +253,7 @@ void Graph<captype,tcaptype,flowtype>::adopt_orphans()
 template <typename captype, typename tcaptype, typename flowtype> 
 flowtype Graph<captype,tcaptype,flowtype>::maxflow()
 {
-    nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE);
-
     maxflow_init();
-
-    // main loop
     for(node *i=0; i || (i=next_active());) {
         arc* a = grow_tree(i);
         ++time;
@@ -287,10 +268,6 @@ flowtype Graph<captype,tcaptype,flowtype>::maxflow()
         if (!i->parent) // i could not be adopted
             i=0;
     }
-
-    delete nodeptr_block;
-    nodeptr_block = 0;
-
     return flow;
 }
 
