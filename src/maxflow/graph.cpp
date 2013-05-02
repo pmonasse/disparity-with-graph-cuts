@@ -1,9 +1,6 @@
 #ifdef GRAPH_H
 
 /// Constructor
-/// The argument is the pointer to a function which will be called 
-/// if an error occurs; an error message is passed to this function. 
-/// If this argument is omitted, exit(1) will be called.
 template <typename captype, typename tcaptype, typename flowtype> 
 Graph<captype, tcaptype, flowtype>::Graph()
 : nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0)
@@ -25,24 +22,24 @@ Graph<captype,tcaptype,flowtype>::add_node()
     return i;
 }
 
-/// Add two edges between 'i' and 'j' with the weights 'cap' and 'rev_cap'
+/// Add two edges between 'i' and 'j' with the weights 'capij' and 'capji'
 template <typename captype, typename tcaptype, typename flowtype> 
-void Graph<captype,tcaptype,flowtype>::add_edge(node_id _i, node_id _j,
-                                                captype cap, captype rev_cap)
+void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
+                                                captype capij, captype capji)
 {
-    assert(_i != _j);
-    assert(cap >= 0);
-    assert(rev_cap >= 0);
+    assert(i != j);
+    assert(capij >= 0);
+    assert(capji >= 0);
 
     arc_id ij=static_cast<arc_id>(arcs.size()), ji=ij+1;
 
-    arc a     = {_j, nodes[_i].first, ji, cap};
-    arc a_rev = {_i, nodes[_j].first, ij, rev_cap};
+    arc aij = {j, nodes[i].first, ji, capij};
+    arc aji = {i, nodes[j].first, ij, capji};
 
-    nodes[_i].first = ij;
-    nodes[_j].first = ji;
-    arcs.push_back(a);
-    arcs.push_back(a_rev);
+    nodes[i].first = ij;
+    nodes[j].first = ji;
+    arcs.push_back(aij);
+    arcs.push_back(aji);
 }
 
 /// Adds new edge 'SOURCE->i' and 'i->SINK' with corresponding weights.
@@ -51,25 +48,25 @@ void Graph<captype,tcaptype,flowtype>::add_edge(node_id _i, node_id _j,
 /// No internal memory is allocated by this call.
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
-                                                    tcaptype cap_source,
-                                                    tcaptype cap_sink)
+                                                    tcaptype capSource,
+                                                    tcaptype capSink)
 {
     tcaptype delta = nodes[i].cap;
-    if (delta > 0) cap_source += delta;
-    else           cap_sink   -= delta;
-    flow += (cap_source < cap_sink) ? cap_source : cap_sink;
-    nodes[i].cap = cap_source - cap_sink;
+    if (delta > 0) capSource += delta;
+    else           capSink   -= delta;
+    flow += (capSource < capSink) ? capSource : capSink;
+    nodes[i].cap = capSource - capSink;
 }
 
 /// After the maxflow is computed, this function returns to which segment the
 /// node 'i' belongs (SOURCE or SINK).
 /// Occasionally there may be several minimum cuts. If a node can be assigned
-/// to both the source and the sink, then default_segm is returned.
+/// to both the source and the sink, then defaultSegm is returned.
 template <typename captype, typename tcaptype, typename flowtype> 
 typename Graph<captype,tcaptype,flowtype>::termtype
-Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype default_segm)
+Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype defaultSegm)
 {
-    return (nodes[i].parent? nodes[i].term: default_segm);
+    return (nodes[i].parent? nodes[i].term: defaultSegm);
 }
 
 #endif

@@ -41,11 +41,11 @@ public:
     virtual ~Graph();
 
     node_id add_node();
-    void add_edge(node_id i, node_id j, captype cap, captype rev_cap);
-    void add_tweights(node_id i, tcaptype cap_source, tcaptype cap_sink);
+    void add_edge(node_id i, node_id j, captype capij, captype capji);
+    void add_tweights(node_id i, tcaptype capSource, tcaptype capSink);
 
     flowtype maxflow();
-    termtype what_segment(node_id i, termtype default_segm=SOURCE);
+    termtype what_segment(node_id i, termtype defaultSegm=SOURCE);
 
 private:
     struct node;
