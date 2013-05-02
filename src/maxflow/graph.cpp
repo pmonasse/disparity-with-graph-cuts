@@ -57,11 +57,11 @@ void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
                                                     tcaptype cap_source,
                                                     tcaptype cap_sink)
 {
-    tcaptype delta = nodes[i].tr_cap;
+    tcaptype delta = nodes[i].cap;
     if (delta > 0) cap_source += delta;
     else           cap_sink   -= delta;
     flow += (cap_source < cap_sink) ? cap_source : cap_sink;
-    nodes[i].tr_cap = cap_source - cap_sink;
+    nodes[i].cap = cap_source - cap_sink;
 }
 
 /// After the maxflow is computed, this function returns to which segment the

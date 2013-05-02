@@ -52,20 +52,20 @@ private:
     struct arc;
 
     struct node {
-        arc_id first;    // first outgoing arc
-        arc* parent;     // initial path to root (a terminal node) if in tree
-        node* next;      // pointer to next active node (itself if last node)
-        int TS;          // timestamp showing when DIST was computed
-        int DIST;        // distance to the terminal
-        termtype term;   // source or sink tree? (only if parent!=NULL)
-        tcaptype tr_cap; // capacity of arc SOURCE->node if >0, or node->SINK
+        arc_id first;  // first outgoing arc
+        arc* parent;   // initial path to root (a terminal node) if in tree
+        node* next;    // pointer to next active node (itself if last node)
+        int ts;        // timestamp showing when DIST was computed
+        int dist;      // distance to the terminal
+        termtype term; // source or sink tree? (only if parent!=NULL)
+        tcaptype cap;  // capacity of arc SOURCE->node (>0), or node->SINK (<0)
     };
 
     struct arc {
         node_id head;  // node the arc points to
         arc_id next;   // next arc with the same originating node
         arc_id sister; // reverse arc
-        captype r_cap; // residual capacity
+        captype cap;   // residual capacity
     };
 
     struct nodeptr {
@@ -82,7 +82,7 @@ private:
     static const int NODEPTR_BLOCK_SIZE = 128;
     DBlock<nodeptr>* nodeptr_block;
     nodeptr *orphan_first, *orphan_last; // list of pointers to orphans
-    int TIME;// monotonically increasing global counter
+    int time; // monotonically increasing global counter
 
     // functions for processing active list
     void set_active(node* i);
@@ -92,8 +92,10 @@ private:
     void set_orphan(node* i);  // add to the end of the list
     void process_source_orphan(node* i);
     void process_sink_orphan(node* i);
+    void adopt_orphans();
 
     void maxflow_init();
+    arc* grow_tree(node* i);
     void augment(arc* middle_arc);
 };
 
