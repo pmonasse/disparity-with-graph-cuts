@@ -90,11 +90,11 @@ private:
 
     // functions for processing orphans
     void set_orphan(node* i);  // add to the end of the list
-    void process_source_orphan(node* i);
-    void process_sink_orphan(node* i);
+    void process_orphan(node* i);
     void adopt_orphans();
 
     void maxflow_init();
+    int dist_to_root(node* j);
     arc* grow_tree(node* i);
     void augment(arc* middle_arc);
 };

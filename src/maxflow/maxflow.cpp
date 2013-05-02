@@ -1,10 +1,10 @@
 #ifdef GRAPH_H
 
+#include <limits>
+
 // special constants for node->parent
 #define TERMINAL (arc*)1 // arc to terminal
 #define ORPHAN   (arc*)2 // arc to orphan
-
-#define INFINITE_D ((int)(((unsigned)-1)/2)) // infinite distance to terminal
 
 /// Mark node as active.
 /// i->next points to the next active node (or itself, if last).
@@ -20,7 +20,7 @@ void Graph<captype,tcaptype,flowtype>::set_active(node* i)
     }
 }
 
-/// Return the next active node and remove from the list.
+/// Return the next active node and remove it from the list.
 template <typename captype, typename tcaptype, typename flowtype> 
 typename Graph<captype,tcaptype,flowtype>::node*
 Graph<captype,tcaptype,flowtype>::next_active()
@@ -137,128 +137,6 @@ void Graph<captype,tcaptype,flowtype>::augment(arc* middle_arc)
         set_orphan(&nodes[i]);
 }
 
-/// Try to reconnect orphan i to its original tree.
-template <typename captype, typename tcaptype, typename flowtype> 
-void Graph<captype,tcaptype,flowtype>::process_source_orphan(node* i)
-{
-    int d_min=INFINITE_D;
-
-    /* trying to find a new parent */
-    i->parent = 0;
-    for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
-        if (arcs[arcs[a0].sister].cap) {
-            node* j = &nodes[arcs[a0].head];
-            if (j->term==SOURCE && j->parent!=0) {
-                /* checking the origin of j */
-                int d = 0;
-                while (true) {
-                    if (j->ts == time) {
-                        d += j->dist;
-                        break;
-                    }
-                    arc* a = j->parent;
-                    d ++;
-                    if (a==TERMINAL) {
-                        j->ts = time;
-                        j->dist = 1;
-                        break;
-                    }
-                    if (a==ORPHAN || a==0) { d = INFINITE_D; break; }
-                    j = &nodes[a->head];
-                }
-                if (d<INFINITE_D) { /* j originates from the source - done */
-                    if (d<d_min) {
-                        i->parent = &arcs[a0];
-                        d_min = d;
-                    }
-                    /* set marks along the path */
-                    for (j=&nodes[arcs[a0].head]; j->ts!=time;
-                         j=&nodes[j->parent->head]) {
-                        j->ts = time;
-                        j->dist = d--;
-                    }
-                }
-            }
-        }
-
-    if (i->parent) {
-        i->ts = time;
-        i->dist = d_min + 1;
-    } else { // no parent is found, process neighbors
-        for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next) {
-            node* j = &nodes[arcs[a0].head];
-            arc* a;
-            if (j->term==SOURCE && (a=j->parent)) {
-                if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
-                    set_orphan(j);
-                if (arcs[arcs[a0].sister].cap)
-                    set_active(j);
-            }
-        }
-    }
-}
-
-/// Try to reconnect orphan i to its original tree.
-template <typename captype, typename tcaptype, typename flowtype> 
-void Graph<captype,tcaptype,flowtype>::process_sink_orphan(node *i)
-{
-    int d_min=INFINITE_D;
-
-    /* trying to find a new parent */
-    i->parent = 0;
-    for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
-        if (arcs[a0].cap) {
-            node* j = &nodes[arcs[a0].head];
-            if (j->term==SINK && j->parent!=0) {
-                /* checking the origin of j */
-                int d = 0;
-                while (true) {
-                    if (j->ts == time) {
-                        d += j->dist;
-                        break;
-                    }
-                    arc* a = j->parent;
-                    d ++;
-                    if (a==TERMINAL) {
-                        j->ts = time;
-                        j->dist = 1;
-                        break;
-                    }
-                    if (a==ORPHAN || a==0) { d = INFINITE_D; break; }
-                    j = &nodes[a->head];
-                }
-                if (d<INFINITE_D) { /* j originates from the sink - done */
-                    if (d<d_min) {
-                        i->parent = &arcs[a0];
-                        d_min = d;
-                    }
-                    /* set marks along the path */
-                    for (j=&nodes[arcs[a0].head]; j->ts!=time;
-                         j=&nodes[j->parent->head]) {
-                        j->ts = time;
-                        j->dist = d --;
-                    }
-                }
-            }
-        }
-
-    if (i->parent) {
-        i->ts = time;
-        i->dist = d_min + 1;
-    } else { // no parent is found, process neighbors
-        for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next) {
-            node* j = &nodes[arcs[a0].head];
-            arc* a;
-            if (j->term==SINK && (a=j->parent)) {
-                if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
-                    set_orphan(j);
-                if (arcs[a0].cap)
-                    set_active(j);
-            }
-        }
-    }
-}
-
 /// Extend the tree to neighbor nodes of tree leaf i. If doing so reaches the
 /// other tree, return the arc oriented from source tree to sink tree.
 template <typename captype, typename tcaptype, typename flowtype>
@@ -288,6 +166,64 @@ Graph<captype,tcaptype,flowtype>::grow_tree(node* i)
     return 0;
 }
 
+/// Number of nodes of path from the root of the tree to node j.
+/// Return max integer in case there is no path.
+template <typename captype, typename tcaptype, typename flowtype> 
+int Graph<captype,tcaptype,flowtype>::dist_to_root(node* j)
+{
+    int d = 2; // count nodes j and root
+    for(arc* a; (a=j->parent)!=TERMINAL; d++, j=&nodes[a->head]) {
+        if (a==ORPHAN || a==0)
+            return std::numeric_limits<int>::max();
+        if (j->ts == time)
+            return d+j->dist-1; // -1: do not count root twice
+    }
+    j->ts = time;
+    j->dist = 1;
+    return d;
+}
+
+/// Try to reconnect orphan to its original tree.
+template <typename captype, typename tcaptype, typename flowtype> 
+void Graph<captype,tcaptype,flowtype>::process_orphan(node* i)
+{
+    int dmin=std::numeric_limits<int>::max();
+
+    i->parent = 0;
+    for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next)
+        if (i->term==SOURCE? arcs[arcs[a0].sister].cap: arcs[a0].cap) {
+            node* j = &nodes[arcs[a0].head];
+            if (j->term==i->term && j->parent) { // check origin of j
+                int d = dist_to_root(j);
+                if (d<std::numeric_limits<int>::max()) { // found root
+                    if (d<dmin) {
+                        i->parent = &arcs[a0];
+                        i->ts = time;
+                        i->dist = dmin = d;
+                    }
+                    for (j=&nodes[arcs[a0].head]; j->ts!=time;
+                         j=&nodes[j->parent->head]) { // set marks along path
+                        j->ts = time;
+                        j->dist = d--;
+                    }
+                }
+            }
+        }
+
+    if (!i->parent) { // no parent is found, process neighbors
+        for (arc_id a0=i->first; a0>=0; a0=arcs[a0].next) {
+            node* j = &nodes[arcs[a0].head];
+            arc* a;
+            if (j->term==i->term && (a=j->parent)) {
+                if (a!=TERMINAL && a!=ORPHAN && &nodes[a->head]==i)
+                    set_orphan(j); // j child of i, becomes orphan
+                if (j->term==SOURCE? arcs[arcs[a0].sister].cap: arcs[a0].cap)
+                    set_active(j); // j in tree is neighbor, becomes active
+            }
+        }
+    }
+}
+
 /// Try reconnecting orphans to their tree
 template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::adopt_orphans()
@@ -302,8 +238,7 @@ void Graph<captype,tcaptype,flowtype>::adopt_orphans()
             orphan_first = np->next;
             nodeptr_block->Delete(np);
             if (!orphan_first) orphan_last = 0;
-            if (i->term==SINK) process_sink_orphan(i);
-            else               process_source_orphan(i);
+            process_orphan(i);
         }
 
         orphan_first = np_next;
@@ -330,7 +265,7 @@ flowtype Graph<captype,tcaptype,flowtype>::maxflow()
         augment(a);
         adopt_orphans();
         i->next = 0; // remove active flag
-        if (!i->parent) // i has become orphan
+        if (!i->parent) // i could not be adopted
             i=0;
     }
 
