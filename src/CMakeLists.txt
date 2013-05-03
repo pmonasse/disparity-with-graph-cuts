@@ -9,8 +9,7 @@ SET(SRC cmdLine.h
         nan.h
         statistics.cpp)
 SET(SRC_ENERGY energy/energy.h)
-SET(SRC_MAXFLOW maxflow/block.h
-                maxflow/graph.cpp maxflow/graph.h
+SET(SRC_MAXFLOW maxflow/graph.cpp maxflow/graph.h
                 maxflow/maxflow.cpp)
 
 FIND_PACKAGE(PNG REQUIRED)
