@@ -26,13 +26,13 @@ void convert_gray(GeneralImage& im) {
 
 /// Decode a string as a fraction. Accept also values AUTO (=-1) and INFINITY.
 bool GetFraction(const std::string& s, int& numerator, int& denominator) {
-	if(s=="INFINITY") { numerator = INFINITY; denominator = 1; return true; }
-	if(s=="AUTO")     { numerator = -1;       denominator = 1; return true; }
-	if(std::sscanf(s.c_str(), "%d/%d", &numerator, &denominator) != 2) {
-		if(std::sscanf(s.c_str(), "%d", &numerator) == 1)
+    if(s=="INFINITY") { numerator = INFINITY; denominator = 1; return true; }
+    if(s=="AUTO")     { numerator = -1;       denominator = 1; return true; }
+    if(std::sscanf(s.c_str(), "%d/%d", &numerator, &denominator) != 2) {
+        if(std::sscanf(s.c_str(), "%d", &numerator) == 1)
             denominator = 1;
-	}
-	bool ok = (numerator>=0 && denominator>=1);
+    }
+    bool ok = (numerator>=0 && denominator>=1);
     if(! ok)
         std::cerr << "Unable to decode " << s << " as fraction" << std::endl;
     return ok;
@@ -59,9 +59,9 @@ void setK(int& lambda, int denom, Match::Parameters& params) {
 
 /// GCD of integers
 int gcd(int a, int b) {
-	if(b == 0) return a;
-	int r = a % b;
-	return gcd(b, r);
+    if(b == 0) return a;
+    int r = a % b;
+    return gcd(b, r);
 }
 
 void fix_parameters(Match& m, Match::Parameters params, int lambda) {
@@ -80,9 +80,9 @@ void fix_parameters(Match& m, Match::Parameters params, int lambda) {
     if(params.lambda1<0) params.lambda1 = 3*lambda;
     if(params.lambda2<0) params.lambda2 = lambda;
     int denom = gcd(params.K,
-                gcd(params.lambda1,
-                gcd(params.lambda2,
-                    params.denominator)));
+                    gcd(params.lambda1,
+                        gcd(params.lambda2,
+                            params.denominator)));
     if(denom) {
         params.K /= denom;
         params.lambda1 /= denom;
@@ -94,12 +94,12 @@ void fix_parameters(Match& m, Match::Parameters params, int lambda) {
 
 int main(int argc, char *argv[]) {
     // Default parameters
-	Match::Parameters params = {
-		Match::Parameters::L2, 1, /* data_cost, denominator */
-		8, -1, -1,       /* I_threshold2, lambda1, lambda2 */
-		-1,                 /* K */
-		INFINITY, false,    /* iter_max, randomize_every_iteration */
-	};
+    Match::Parameters params = {
+        Match::Parameters::L2, 1, /* data_cost, denominator */
+        8, -1, -1,       /* I_threshold2, lambda1, lambda2 */
+        -1,                 /* K */
+        INFINITY, false,    /* iter_max, randomize_every_iteration */
+    };
 
     CmdLine cmd;
     std::string cost, slambda, slambda1, slambda2, sK, sDisp;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     cmd.add( make_option('o', sDisp, "output") );
 
     cmd.process(argc, argv);
-	if(argc != 5 && argc != 6) {
+    if(argc != 5 && argc != 6) {
         std::cerr << "Usage: " << argv[0] << " [options] "
                   << "im1.png im2.png dMin dMax [dispMap.tif]" << std::endl;
         return 1;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     Match m(im1, im2, color);
 
     // Disparity
-	int disp_base=0, disp_max=0;
+    int disp_base=0, disp_max=0;
     std::istringstream f(argv[3]), g(argv[4]);
     if(! ((f>>disp_base).eof() && (g>>disp_max).eof())) {
         std::cerr << "Error reading dMin or dMax" << std::endl;
@@ -182,5 +182,5 @@ int main(int argc, char *argv[]) {
 
     imFree(im1);
     imFree(im2);
-	return 0;
+    return 0;
 }
