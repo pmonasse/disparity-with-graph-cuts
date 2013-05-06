@@ -32,5 +32,5 @@ ENDIF(UNIX)
 INSTALL(FILES ${SRC} CMakeLists.txt DESTINATION src)
 INSTALL(FILES ${SRC_ENERGY} energy/README.TXT DESTINATION src/energy)
 INSTALL(FILES ${SRC_MAXFLOW}
-              maxflow/CHANGES.TXT maxflow/LICENSE.TXT maxflow/README.TXT
+              maxflow/CHANGES.TXT maxflow/README.TXT
         DESTINATION src/maxflow)
