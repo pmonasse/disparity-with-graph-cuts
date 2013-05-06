@@ -66,6 +66,7 @@ Match::Match(GeneralImage left, GeneralImage right, bool color)
     varsA = (IntImage)imNew(IMAGE_INT, im_size.x, im_size.y);
 }
 
+/// Destructor
 Match::~Match()
 {
     imFree(im_left_min);
@@ -205,9 +206,7 @@ void Match::Run()
             assert(ComputeEnergy()==E);
 
             ++step;
-            std::cout << (oldE==E? '-': '*');
-            std::cout << "E=" << E;
-            std::cout << std::flush;
+            std::cout << (oldE==E? '-': '*') << std::flush;
 
             if(oldE == E) {
                 buf[label] = true; --nBuf;

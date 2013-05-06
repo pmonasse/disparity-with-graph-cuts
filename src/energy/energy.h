@@ -129,6 +129,6 @@ inline Energy::TotalValue Energy::minimize() { return Econst + maxflow(); }
 
 /// After 'minimize' has been called, determine the value of variable 'x'
 /// in the optimal solution. Can be 0 or 1.
-inline int Energy::get_var(Var x) { return (int)what_segment(x); }
+inline int Energy::get_var(Var x) { return (int)what_segment(x, SINK); }
 
 #endif
