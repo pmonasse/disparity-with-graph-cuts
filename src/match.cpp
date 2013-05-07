@@ -2,7 +2,6 @@
 /* Vladimir Kolmogorov (vnk@cs.cornell.edu), 2001-2003. */
 
 #include "match.h"
-#include "io_tiff.h"
 #include "nan.h"
 #include <iostream>
 #include <iomanip>
@@ -88,16 +87,16 @@ Match::~Match()
 void Match::SaveXLeft(const char *file_name)
 {
     Coord p;
-    float* out=new float[im_size.x*im_size.y], *c=out;
+    FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, im_size.x,im_size.y);
 
     for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++, c++) {
+        for (p.x=0; p.x<im_size.x; p.x++) {
             int d=IMREF(x_left,p);
-            *c = (d==OCCLUDED? NaN: static_cast<float>(d));
+            IMREF(out,p) = (d==OCCLUDED? NaN: static_cast<float>(d));
         }
 
-    io_tiff_write_f32(file_name, out, im_size.x, im_size.y, 1);
-    delete [] out;
+    imSave(out, file_name);
+    imFree(out);
 }
 
 /// Save scaled disparity map as 8-bit color image (gray between 64 and 255).

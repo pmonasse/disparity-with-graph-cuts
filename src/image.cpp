@@ -3,7 +3,12 @@
 
 #include <stdio.h>
 #include "image.h"
+#ifdef HAS_PNG
 #include "io_png.h"
+#endif
+#ifdef HAS_TIFF
+#include "io_tiff.h"
+#endif
 
 const int ONE = 1;
 const int SWAP_BYTES = (((char *)(&ONE))[0] == 0) ? 1 : 0;
@@ -85,12 +90,14 @@ void* imLoad(ImageType type, const char *filename)
 {
     unsigned char* data=0;
     size_t xsize, ysize;
+#ifdef HAS_PNG
     if(type == IMAGE_GRAY)
         data = io_png_read_u8_gray(filename, &xsize, &ysize);
     if(type == IMAGE_RGB)
         data = io_png_read_u8_rgb(filename, &xsize, &ysize);
     if(! data)
         return data;
+#endif
 
     GeneralImage im = (GeneralImage) imNew(type, xsize, ysize);
     const size_t size = xsize*ysize;
@@ -121,6 +128,11 @@ int imSave(void *im, const char *filename)
     ImageType type = imHeader(im)->type;
     int xsize = imHeader(im)->xsize, ysize = imHeader(im)->ysize;
     int data_size = imHeader(im)->data_size;
+
+#ifdef HAS_TIFF
+    if(type == IMAGE_FLOAT)
+        return io_tiff_write_f32(filename, ((FloatImage)im)->data, xsize, ysize, 1);
+#endif
 
     fp = fopen(filename, "wb");
     if (!fp) return -1;
