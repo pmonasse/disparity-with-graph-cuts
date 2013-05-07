@@ -53,12 +53,13 @@ public:
         int denominator;
 
         // Smoothness term
-        int I_threshold2;
-        int lambda1, lambda2;
+        int I_threshold2; ///< Intensity level diff for 'edge'
+        int lambda1; ///< Smoothness cost not across edge
+        int lambda2; ///< Smoothness cost across edge (should be <=lambda1)
         int K; ///< Penalty for inactive assignment
 
         int iter_max; ///< Maximum number of iterations
-        bool randomize_every_iteration;
+        bool randomize_every_iteration; ///< Random alpha order at each iter
 
     };
     float GetK();
@@ -93,25 +94,24 @@ private:
     void InitSubPixel();
 
     // Data penalty functions
-    int data_penalty_gray (Coord l, Coord r);
-    int data_penalty_color(Coord l, Coord r);
+    int data_penalty_gray (Coord l, Coord r) const;
+    int data_penalty_color(Coord l, Coord r) const;
 
     // Smoothness penalty functions
-    int   smoothness_penalty_gray (Coord p, Coord np, int d);
-    int   smoothness_penalty_color(Coord p, Coord np, int d);
+    int   smoothness_penalty_gray (Coord p, Coord np, int d) const;
+    int   smoothness_penalty_color(Coord p, Coord np, int d) const;
 
     // Kolmogorov-Zabih algorithm
-    int   data_occlusion_penalty(Coord l, Coord r);
-    int   smoothness_penalty(Coord p, Coord np, int d);
-    int   ComputeEnergy();
+    int   data_occlusion_penalty(Coord l, Coord r) const;
+    int   smoothness_penalty(Coord p, Coord np, int d) const;
+    int   ComputeEnergy() const;
     void  ExpansionMove(int a);
 
     // Graph construction
     void build_nodes     (Energy& e, Coord p, int a);
     void build_uniqueness(Energy& e, Coord p, int a);
     void build_smoothness(Energy& e, Coord p, Coord np, int a);
+    void update_disparity(const Energy& e, int a);
 };
-
-#define INFINITY 10000 /// Infinite capacity
 
 #endif

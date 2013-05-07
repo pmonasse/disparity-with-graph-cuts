@@ -6,7 +6,6 @@
 #include "nan.h"
 #include <iostream>
 #include <iomanip>
-#include <ctime>
 #include <cassert>
 
 /// Constructor
@@ -147,7 +146,7 @@ void Match::KZ2()
     }
 
     if (params.denominator == 1)
-        std::cout << "KZ2:  K=params.K" << std::endl
+        std::cout << "KZ2:  K=" << params.K << std::endl
                   << "      I_threshold2=" << params.I_threshold2
                   << ", lambda1=" << params.lambda1
                   << ", lambda2=" << params.lambda2
@@ -177,10 +176,7 @@ void generate_permutation(int *buf, int n)
 /// Main algorithm: a series of alpha-expansions.
 void Match::Run()
 {
-    unsigned int seed = time(NULL);
-    seed=0; // ------------- DEBUG ----------------
-    std::cout << "Random seed = " << seed;
-    srand(seed);
+    // Display 1 number after decimal separator for number of iterations
     std::cout << std::fixed << std::setprecision(1);
 
     const int dispSize = dispMax-dispMin+1;
@@ -189,7 +185,7 @@ void Match::Run()
     int nBuf = dispSize; // number of 'false' entries in buf
 
     E = ComputeEnergy();
-    std::cout << "E = " << E << std::endl;
+    std::cout << "E=" << E << std::endl;
 
     std::fill_n(buf, dispSize, false);
     int step=0;
@@ -216,7 +212,7 @@ void Match::Run()
                 nBuf = dispSize-1;
             }
         }
-        std::cout << " E = " << E << std::endl;
+        std::cout << " E=" << E << std::endl;
     }
 
     std::cout << (float)step/dispSize << " iterations" << std::endl;

@@ -27,13 +27,13 @@
 #include <vector>
 #include <queue>
 
-// captype: type of edge capacities (excluding t-links)
-// tcaptype: type of t-links (edges between nodes and terminals)
-// flowtype: type of total flow
+/// captype: type of edge capacities (excluding t-links)
+/// tcaptype: type of t-links (edges between nodes and terminals)
+/// flowtype: type of total flow
 template <typename captype, typename tcaptype, typename flowtype> class Graph
 {
 public:
-    typedef enum { SOURCE=0, SINK=1} termtype; // terminals 
+    typedef enum { SOURCE=0, SINK=1} termtype; ///< terminals 
     typedef int node_id;
     typedef int arc_id;
 
@@ -45,43 +45,44 @@ public:
     void add_tweights(node_id i, tcaptype capSource, tcaptype capSink);
 
     flowtype maxflow();
-    termtype what_segment(node_id i, termtype defaultSegm=SOURCE);
+    termtype what_segment(node_id i, termtype defaultSegm=SOURCE) const;
 
 private:
     struct node;
     struct arc;
 
+    /// A node of the graph
     struct node {
-        arc_id first;  // first outgoing arc
-        arc* parent;   // initial path to root (a terminal node) if in tree
-        node* next;    // pointer to next active node (itself if last node)
-        int ts;        // timestamp showing when DIST was computed
-        int dist;      // distance to the terminal
-        termtype term; // source or sink tree? (only if parent!=NULL)
-        tcaptype cap;  // capacity of arc SOURCE->node (>0), or node->SINK (<0)
+        arc_id first;  ///< first outgoing arc
+        arc* parent;   ///< initial path to root (a terminal node) if in tree
+        node* next;    ///< pointer to next active node (itself if last node)
+        int ts;        ///< timestamp showing when DIST was computed
+        int dist;      ///< distance to the terminal
+        termtype term; ///< source or sink tree? (only if parent!=NULL)
+        tcaptype cap;  ///< capacity of arc SOURCE->node(>0) or node->SINK(<0)
     };
-
+    /// An arc of the graph
     struct arc {
-        node_id head;  // node the arc points to
-        arc_id next;   // next arc with the same originating node
-        arc_id sister; // reverse arc
-        captype cap;   // residual capacity
+        node_id head;  ///< node the arc points to
+        arc_id next;   ///< next arc with the same originating node
+        arc_id sister; ///< reverse arc
+        captype cap;   ///< residual capacity
     };
 
-    std::vector<node> nodes;
-    std::vector<arc> arcs;
+    std::vector<node> nodes; ///< All nodes of graph
+    std::vector<arc> arcs;   ///< All arcs of graph
 
-    flowtype flow; // total flow
-    node *activeBegin, *activeEnd; // list of active nodes
-    std::queue<node*> orphans; // list of pointers to orphans
-    int time; // monotonically increasing global counter
+    flowtype flow; ///< total flow
+    node *activeBegin, *activeEnd; ///< list of active nodes
+    std::queue<node*> orphans; ///< list of pointers to orphans
+    int time; ///< monotonically increasing global counter
 
     // functions for processing active list
     void set_active(node* i);
     node* next_active();
 
     // functions for processing orphans
-    void set_orphan(node* i);  // add to the end of the list
+    void set_orphan(node* i);
     void process_orphan(node* i);
     void adopt_orphans();
 

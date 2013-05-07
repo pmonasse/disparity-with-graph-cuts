@@ -53,9 +53,8 @@ void Graph<captype,tcaptype,flowtype>::maxflow_init()
     activeBegin=activeEnd=0;
     time = 0;
 
-    typename std::vector<node>::iterator it=nodes.begin();
-    for (; it!=nodes.end(); ++it) {
-        node* i= &(*it);
+    typename std::vector<node>::iterator i=nodes.begin();
+    for (; i!=nodes.end(); ++i) {
         i->next = 0;
         i->ts = time;
         if(i->cap == 0)
@@ -63,7 +62,7 @@ void Graph<captype,tcaptype,flowtype>::maxflow_init()
         else {
             i->term = (i->cap>0? SOURCE: SINK);
             i->parent = TERMINAL;
-            set_active(i);
+            set_active(&(*i));
             i->dist = 1;
         }
     }

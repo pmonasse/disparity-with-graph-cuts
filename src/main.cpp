@@ -1,5 +1,6 @@
 #include "match.h"
 #include "cmdLine.h"
+#include <ctime>
 #include <cstdio>
 
 /// Is the color image actually gray?
@@ -24,9 +25,8 @@ void convert_gray(GeneralImage& im) {
     im = (GeneralImage)g;
 }
 
-/// Decode a string as a fraction. Accept also values AUTO (=-1) and INFINITY.
+/// Decode a string as a fraction. Accept also value AUTO (=-1).
 bool GetFraction(const std::string& s, int& numerator, int& denominator) {
-    if(s=="INFINITY") { numerator = INFINITY; denominator = 1; return true; }
     if(s=="AUTO")     { numerator = -1;       denominator = 1; return true; }
     if(std::sscanf(s.c_str(), "%d/%d", &numerator, &denominator) != 2) {
         if(std::sscanf(s.c_str(), "%d", &numerator) == 1)
@@ -64,10 +64,15 @@ int gcd(int a, int b) {
     return gcd(b, r);
 }
 
+/// Make sure parameters K, lambda1 and lambda2 are non-negative.
+///
+/// - K may be computed automatically and lambda set to K/5.
+/// - lambda1=3*lambda, lambda2=lambda
+/// As the graph requires integer weights, use fractions and common denominator.
 void fix_parameters(Match& m, Match::Parameters params, int lambda) {
     if(lambda<0) { // Set lambda to K/5
         float K = params.K/(float)params.denominator;
-        if(params.K<0) { // Automatic computation of K
+        if(params.K<=0) { // Automatic computation of K
             m.SetParameters(&params);
             K = m.GetK();
         }
@@ -95,28 +100,39 @@ void fix_parameters(Match& m, Match::Parameters params, int lambda) {
 int main(int argc, char *argv[]) {
     // Default parameters
     Match::Parameters params = {
-        Match::Parameters::L2, 1, /* data_cost, denominator */
-        8, -1, -1,       /* I_threshold2, lambda1, lambda2 */
-        -1,                 /* K */
-        INFINITY, false,    /* iter_max, randomize_every_iteration */
+        Match::Parameters::L2, 1, // data_cost, denominator
+        8, -1, -1,                // I_threshold2, lambda1, lambda2 */
+        -1,                       // K
+        4, false                  // iter_max, randomize_every_iteration
     };
 
     CmdLine cmd;
     std::string cost, slambda, slambda1, slambda2, sK, sDisp;
-    cmd.add( make_option('c', cost, "data_cost") );
-    cmd.add( make_option('t', params.I_threshold2, "threshold2") );
     cmd.add( make_option('i', params.iter_max, "iter_max") );
+    cmd.add( make_option('o', sDisp, "output") );
     cmd.add( make_switch('r', "random") );
+    cmd.add( make_option('c', cost, "data_cost") );
     cmd.add( make_option('l', slambda, "lambda") );
     cmd.add( make_option(0, slambda1, "lambda1") );
     cmd.add( make_option(0, slambda2, "lambda2") );
+    cmd.add( make_option('t', params.I_threshold2, "threshold2") );
     cmd.add( make_option('k', sK) );
-    cmd.add( make_option('o', sDisp, "output") );
 
     cmd.process(argc, argv);
     if(argc != 5 && argc != 6) {
         std::cerr << "Usage: " << argv[0] << " [options] "
                   << "im1.png im2.png dMin dMax [dispMap.tif]" << std::endl;
+        std::cerr << "General options:" << '\n'
+                  << " -i,--iter_max iter: max number of iterations" <<'\n'
+                  << " -o,--output disp.png: scaled disparity map" <<std::endl
+                  << " -r,--random: random alpha order at each iteration" <<'\n'
+                  << "Options for cost:" <<'\n'
+                  << " -c,--data_cost dist: L1 or L2" <<'\n'
+                  << " -l,--lambda lambda: value of lambda (smoothness)" <<'\n'
+                  << " --lambda1 l1: smoothness cost not across edge" <<'\n'
+                  << " --lambda2 l2: smoothness cost across edge" <<'\n'
+                  << " -t,--threshold2 thres: intensity diff for 'edge'" <<'\n'
+                  << " -k k: cost for occlusion" <<std::endl;
         return 1;
     }
 
@@ -170,6 +186,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     m.SetDispRange(disp_base, disp_max);
+
+    unsigned int seed = time(NULL);
+    srand(seed);
 
     fix_parameters(m, params, lambda);
     if(argc>5 || !sDisp.empty()) {

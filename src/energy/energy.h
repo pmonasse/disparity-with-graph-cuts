@@ -72,21 +72,19 @@ class Energy : Graph<short,short,int>
 {
 public:
     typedef node_id Var;
-
-    // Types of energy values.
     typedef short Value; ///< Type of a value in a single term
     typedef int TotalValue; ///< Type of a value of the total energy
 
     Energy();
     ~Energy();
 
-    Var add_variable();
+    Var add_variable(Value E0=0, Value E1=0);
     void add_constant(Value E);
     void add_term1(Var x, Value E0, Value E1);
     void add_term2(Var x, Var y, Value E00, Value E01, Value E10, Value E11);
 
     TotalValue minimize();
-    int get_var(Var x);
+    int get_var(Var x) const;
 
 private:
     TotalValue Econst; ///< Constant added to the energy
@@ -101,7 +99,11 @@ inline Energy::Energy()
 inline Energy::~Energy() {}
 
 /// Add a new binary variable
-inline Energy::Var Energy::add_variable() { return add_node(); }
+inline Energy::Var Energy::add_variable(Value E0, Value E1) {
+    Energy::Var var = add_node();
+    add_term1(var, E0, E1);
+    return var;
+}
 
 /// Adds a constant to the energy function
 inline void Energy::add_constant(Value A) { Econst += A; }
@@ -129,6 +131,6 @@ inline Energy::TotalValue Energy::minimize() { return Econst + maxflow(); }
 
 /// After 'minimize' has been called, determine the value of variable 'x'
 /// in the optimal solution. Can be 0 or 1.
-inline int Energy::get_var(Var x) { return (int)what_segment(x, SINK); }
+inline int Energy::get_var(Var x) const { return (int)what_segment(x, SINK); }
 
 #endif

@@ -27,6 +27,8 @@ template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
                                                 captype capij, captype capji)
 {
+    assert(0<=i && i<(int)nodes.size());
+    assert(0<=j && j<(int)nodes.size());
     assert(i != j);
     assert(capij >= 0);
     assert(capji >= 0);
@@ -61,12 +63,12 @@ void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
 /// After the maxflow is computed, this function returns to which segment the
 /// node 'i' belongs (SOURCE or SINK).
 /// Occasionally there may be several minimum cuts. If a node can be assigned
-/// to both the source and the sink, then defaultSegm is returned.
+/// to both the source and the sink, then default def is returned.
 template <typename captype, typename tcaptype, typename flowtype> 
 typename Graph<captype,tcaptype,flowtype>::termtype
-Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype defaultSegm)
+Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype def) const
 {
-    return (nodes[i].parent? nodes[i].term: defaultSegm);
+    return (nodes[i].parent? nodes[i].term: def);
 }
 
 #endif

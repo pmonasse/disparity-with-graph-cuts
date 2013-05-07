@@ -10,11 +10,8 @@ smoothness_penalty_X(Coord p, Coord np, Coord disp)
 where X describes the appropriate case (gray/color)
 */
 
-#include <stdio.h>
-#include <string.h>
 #include "match.h"
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#include <algorithm>
 
 /************************************************************/
 /********************* data penalty *************************/
@@ -26,9 +23,10 @@ where X describes the appropriate case (gray/color)
 // with one distinction: intensity intervals for a pixels
 // are computed from 4 neighbors rather than 2.
 
-#define CUTOFF 1000
+/// Upper bound for intensity level difference when computing data cost
+static int CUTOFF=30;
 
-int Match::data_penalty_gray(Coord l, Coord r)
+int Match::data_penalty_gray(Coord l, Coord r) const
 {
     int dl, dr, d;
     int Il, Il_min, Il_max, Ir, Ir_min, Ir_max;
@@ -45,13 +43,14 @@ int Match::data_penalty_gray(Coord l, Coord r)
     else if (Ir > Il_max) dr = Ir - Il_max;
     else return 0;
 
-    d = MIN(dl, dr); if (params.data_cost==Parameters::L2) d = d*d;
+    d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
+    if (params.data_cost==Parameters::L2) d = d*d;
 
     return d;
 }
 
-int Match::data_penalty_color(Coord l, Coord r)
+int Match::data_penalty_color(Coord l, Coord r) const
 {
     int dl, dr, d, d_sum = 0;
     int Il, Il_min, Il_max, Ir, Ir_min, Ir_max;
@@ -69,8 +68,9 @@ int Match::data_penalty_color(Coord l, Coord r)
     else if (Ir > Il_max) dr = Ir - Il_max;
     else dr = 0;
 
-    d = MIN(dl, dr); if (params.data_cost==Parameters::L2) d = d*d;
+    d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
+    if (params.data_cost==Parameters::L2) d = d*d;
     d_sum += d;
 
     // green component
@@ -86,8 +86,9 @@ int Match::data_penalty_color(Coord l, Coord r)
     else if (Ir > Il_max) dr = Ir - Il_max;
     else dr = 0;
 
-    d = MIN(dl, dr); if (params.data_cost==Parameters::L2) d = d*d;
+    d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
+    if (params.data_cost==Parameters::L2) d = d*d;
     d_sum += d;
 
     // blue component
@@ -103,8 +104,9 @@ int Match::data_penalty_color(Coord l, Coord r)
     else if (Ir > Il_max) dr = Ir - Il_max;
     else dr = 0;
 
-    d = MIN(dl, dr); if (params.data_cost==Parameters::L2) d = d*d;
+    d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
+    if (params.data_cost==Parameters::L2) d = d*d;
     d_sum += d;
 
     return d_sum/3;
@@ -257,19 +259,18 @@ void Match::InitSubPixel()
 /******************** (static clues) ************************/
 /************************************************************/
 
-
-int Match::smoothness_penalty_gray(Coord p, Coord np, int disp)
+int Match::smoothness_penalty_gray(Coord p, Coord np, int disp) const
 {
     int dl = IMREF(im_left, p) - IMREF(im_left, np);
     int dr = IMREF(im_right, p+disp) - IMREF(im_right, np+disp);
 
     if (dl<0) dl = -dl; if (dr<0) dr = -dr;
 
-    if (dl<params.I_threshold2 && dr<params.I_threshold2) return params.lambda1;
-    else                                                  return params.lambda2;
+    return (dl<params.I_threshold2 && dr<params.I_threshold2)?
+        params.lambda1: params.lambda2;
 }
 
-int Match::smoothness_penalty_color(Coord p, Coord np, int disp)
+int Match::smoothness_penalty_color(Coord p, Coord np, int disp) const
 {
     int d, d_max=0;
 
@@ -291,12 +292,11 @@ int Match::smoothness_penalty_color(Coord p, Coord np, int disp)
     d = IMREF(im_color_right, p+disp).b - IMREF(im_color_right, np+disp).b;
     if (d<0) d = -d; if (d_max<d) d_max = d;
 
-    if (d_max<params.I_threshold2) return params.lambda1;
-    else                           return params.lambda2;
+    return (d_max<params.I_threshold2)? params.lambda1: params.lambda2;
 }
 
 void Match::SetParameters(Parameters *_params)
 {
-    memcpy(&params, _params, sizeof(params));
+    params = *_params;
     InitSubPixel();
 }
