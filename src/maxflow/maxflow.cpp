@@ -167,14 +167,8 @@ Graph<captype,tcaptype,flowtype>::grow_tree(node* i)
                 j->ts = i->ts;
                 j->dist = i->dist + 1;
                 set_active(j);
-            } else if (j->term!=i->term) {
+            } else if (j->term!=i->term)
                 return &arcs[a];
-            } else if (j->ts<=i->ts && j->dist>i->dist) {
-                // heuristic: try shortening distance from j to terminal
-                j->parent = &arcs[arcs[a].sister];
-                j->ts = i->ts;
-                j->dist = i->dist + 1;
-            }
         }
     return 0;
 }
