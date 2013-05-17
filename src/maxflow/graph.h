@@ -77,6 +77,10 @@ private:
     std::queue<node*> orphans; ///< list of pointers to orphans
     int time; ///< monotonically increasing global counter
 
+    // special constants for node.parent
+    arc* TERMINAL; ///< arc to terminal
+    arc* ORPHAN;   ///< arc to orphan
+
     // functions for processing active list
     void set_active(node* i);
     node* next_active();

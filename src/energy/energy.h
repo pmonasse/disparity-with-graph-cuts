@@ -25,39 +25,37 @@
    In order to use it, you will also need a MAXFLOW software which can be
    obtained from http://www.cs.cornell.edu/People/vnk/software.html
 
-   Example usage
-   (Minimizes the following function of 3 binary variables:
-       E(x, y, z) = x - 2*y + 3*(1-z) - 4*x*y + 5*|y-z|):
-
+   Example usage:
 ///////////////////////////////////////////////////
-#include <stdio.h>
+#include <iostream>
 #include "energy.h"
 
 // Minimize the following function of 3 binary variables:
 // E(x, y, z) = x - 2*y + 3*(1-z) - 4*x*y + 5*|y-z|     
-void main()
+int main()
 {
-Energy::Var varx, vary, varz;
-Energy e;
+    Energy::Var x, y, z;
+    Energy e;
 
-varx = e.add_variable();
-vary = e.add_variable();
-varz = e.add_variable();
+    x = e.add_variable();
+    y = e.add_variable();
+    z = e.add_variable();
 
-e.add_term1(varx, 0, 1);  // add term x 
-e.add_term1(vary, 0, -2); // add term -2*y
-e.add_term1(varz, 3, 0);  // add term 3*(1-z)
+    e.add_term1(x, 0, 1);  // add term x 
+    e.add_term1(y, 0, -2); // add term -2*y
+    e.add_term1(z, 3, 0);  // add term 3*(1-z)
 
-e.add_term2(x, y, 0, 0, 0, -4); // add term -4*x*y
-e.add_term2(y, z, 0, 5, 5, 0); // add term 5*|y-z|
+    e.add_term2(x, y, 0, 0, 0, -4); // add term -4*x*y
+    e.add_term2(y, z, 0, 5, 5, 0); // add term 5*|y-z|
 
-Energy::TotalValue Emin = e.minimize();
-  
-printf("Minimum = %d\n", Emin);
-printf("Optimal solution:\n");
-printf("x = %d\n", e.get_var(varx));
-printf("y = %d\n", e.get_var(vary));
-printf("z = %d\n", e.get_var(varz));
+    Energy::TotalValue Emin = e.minimize();
+
+    std::cout << "Minimum = " << Emin   << std::endl;
+    std::cout << "Optimal solution:"    << std::endl;
+    std::cout << "x = " << e.get_var(x) << std::endl;
+    std::cout << "y = " << e.get_var(y) << std::endl;
+    std::cout << "z = " << e.get_var(z) << std::endl;
+    return 0;
 }
 ///////////////////////////////////////////////////
 */

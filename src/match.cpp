@@ -180,21 +180,21 @@ void Match::Run()
 
     const int dispSize = dispMax-dispMin+1;
     int* permutation = new int[dispSize]; // random permutation
-    bool* buf = new bool[dispSize]; // Can expansion of label decrease energy?
-    int nBuf = dispSize; // number of 'false' entries in buf
+    bool* done = new bool[dispSize]; // Can expansion of label decrease energy?
+    int nDone = dispSize; // number of 'false' entries in 'done'
 
     E = ComputeEnergy();
     std::cout << "E=" << E << std::endl;
 
-    std::fill_n(buf, dispSize, false);
+    std::fill_n(done, dispSize, false);
     int step=0;
-    for(int iter=0; iter<params.iter_max && nBuf>0; iter++) {
+    for(int iter=0; iter<params.iter_max && nDone>0; iter++) {
         if (iter==0 || params.randomize_every_iteration)
             generate_permutation(permutation, dispSize);
 
         for(int index=0; index<dispSize; index++) {
             int label = permutation[index];
-            if (buf[label]) continue;
+            if (done[label]) continue;
 
             int oldE=E;
             ExpansionMove(dispMin+label);
@@ -203,13 +203,13 @@ void Match::Run()
             ++step;
             std::cout << (oldE==E? '-': '*') << std::flush;
 
-            if(oldE == E) {
-                buf[label] = true; --nBuf;
-            } else {
-                std::fill_n(buf, dispSize, false);
-                buf[label] = true;
-                nBuf = dispSize-1;
+            if(oldE == E)
+                --nDone;
+            else {
+                std::fill_n(done, dispSize, false);
+                nDone = dispSize-1;
             }
+            done[label] = true;
         }
         std::cout << " E=" << E << std::endl;
     }
@@ -217,5 +217,5 @@ void Match::Run()
     std::cout << (float)step/dispSize << " iterations" << std::endl;
 
     delete [] permutation;
-    delete [] buf;
+    delete [] done;
 }

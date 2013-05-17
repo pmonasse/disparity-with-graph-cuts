@@ -2,13 +2,9 @@
 
 #include <limits>
 
-// special constants for node->parent
-#define TERMINAL (arc*)1 // arc to terminal
-#define ORPHAN   (arc*)2 // arc to orphan
-
 /// Mark node as active.
 /// i->next points to the next active node (or itself, if last).
-/// i->next is 0 iff i should not be considered in the list.
+/// i->next is 0 iff i should not be considered in the queue.
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::set_active(node* i)
 {
@@ -22,20 +18,24 @@ void Graph<captype,tcaptype,flowtype>::set_active(node* i)
     }
 }
 
-/// Return the next active node and remove it from the list.
+/// Return the next active node and remove it from the queue.
+/// Some nodes may be put in prematurely during orphan adoption, whereas they
+/// later appear to be orphan too. To avoid having to remove them explicitly
+/// we just have their parent set to null, so when the front node in the
+/// queue has a null parent, we just ignore it.
 template <typename captype, typename tcaptype, typename flowtype> 
 typename Graph<captype,tcaptype,flowtype>::node*
 Graph<captype,tcaptype,flowtype>::next_active()
 {
-    while (true) {
-        node* i=activeBegin;
-        if (!i)
-            return 0;
-        if (i->next == i) activeBegin = activeEnd = 0;
-        else              activeBegin = i->next;
+    node* i;
+    while((i=activeBegin) != 0) {
+        activeBegin = i->next;
         i->next = 0;
-        if (i->parent) return i; // active iff it has a parent
+        if (activeBegin == i) // if i->next was i, it was last item
+            activeBegin = activeEnd = 0;
+        if (i->parent) break; // active iff it has a parent
     }
+    return i;
 }
 
 /// Set node as orphan.
@@ -50,6 +50,13 @@ void Graph<captype,tcaptype,flowtype>::set_orphan(node* i)
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
+    // Put two fictive arcs
+    arc a = {-1,-1,-1,0};
+    arcs.push_back(a);
+    arcs.push_back(a);
+    TERMINAL = &arcs.back();
+    ORPHAN   = TERMINAL-1;
+
     activeBegin=activeEnd=0;
     time = 0;
 
@@ -66,90 +73,6 @@ void Graph<captype,tcaptype,flowtype>::maxflow_init()
             i->dist = 1;
         }
     }
-}
-
-/// Find max flow that we can push from source to sink through midarc.
-/// midarc must be oriented from source tree to sink tree.
-template <typename captype, typename tcaptype, typename flowtype>
-captype Graph<captype,tcaptype,flowtype>::find_bottleneck(arc* midarc)
-{
-    captype cap = midarc->cap;
-
-    // source tree
-    node_id i=arcs[midarc->sister].head;
-    do {
-        arc* a = nodes[i].parent;
-        if (a == TERMINAL) break;
-        if (cap > arcs[a->sister].cap)
-            cap = arcs[a->sister].cap;
-        i = a->head;
-    } while(true);
-    if (cap > nodes[i].cap)
-        cap = nodes[i].cap;
-
-    // sink tree
-    i=midarc->head;
-    do {
-        arc* a = nodes[i].parent;
-        if (a == TERMINAL) break;
-        if (cap > a->cap)
-            cap = a->cap;
-        i=a->head;
-    } while(true);
-    if (cap > -nodes[i].cap)
-        cap = -nodes[i].cap;
-
-    return cap;
-}
-
-/// Push flow f through path from source to sink through midarc.
-template <typename captype, typename tcaptype, typename flowtype>
-void Graph<captype,tcaptype,flowtype>::push_flow(arc* midarc, captype f)
-{
-    flow += f;
-    // source tree
-    arcs[midarc->sister].cap += f;
-    midarc->cap -= f;
-    node_id i=arcs[midarc->sister].head;
-    do {
-        arc* a = nodes[i].parent;
-        if (a == TERMINAL) break;
-        a->cap += f;
-        arcs[a->sister].cap -= f;
-        if (!arcs[a->sister].cap)
-            set_orphan(&nodes[i]);
-        i=a->head;
-    } while(true);
-    nodes[i].cap -= f;
-    if (!nodes[i].cap)
-        set_orphan(&nodes[i]);
-
-    // sink tree
-    i=midarc->head;
-    do {
-        arc* a = nodes[i].parent;
-        if (a == TERMINAL) break;
-        arcs[a->sister].cap += f;
-        a->cap -= f;
-        if (!a->cap)
-            set_orphan(&nodes[i]);
-        i=a->head;
-    } while(true);
-    nodes[i].cap += f;
-    if (!nodes[i].cap)
-        set_orphan(&nodes[i]);
-}
-
-/// Push flow through path from source to sink passing through midarc.
-template <typename captype, typename tcaptype, typename flowtype>
-void Graph<captype,tcaptype,flowtype>::augment(arc* midarc)
-{
-    // Orient arc from source tree to sink tree
-    if(nodes[midarc->head].term==SOURCE)
-        midarc = &arcs[midarc->sister];
-
-    captype bottleneck = find_bottleneck(midarc);
-    push_flow(midarc, bottleneck);
 }
 
 /// Extend the tree to neighbor nodes of tree leaf i. If doing so reaches the
@@ -171,6 +94,85 @@ Graph<captype,tcaptype,flowtype>::grow_tree(node* i)
                 return &arcs[a];
         }
     return 0;
+}
+
+/// Find max flow that we can push from source to sink through midarc.
+/// midarc must be oriented from source tree to sink tree.
+template <typename captype, typename tcaptype, typename flowtype>
+captype Graph<captype,tcaptype,flowtype>::find_bottleneck(arc* midarc)
+{
+    captype cap = midarc->cap;
+
+    // source tree
+    node_id i=arcs[midarc->sister].head;
+    arc* a;
+    while((a=nodes[i].parent) != TERMINAL) {
+        if (cap > arcs[a->sister].cap)
+            cap = arcs[a->sister].cap;
+        i = a->head;
+    }
+    if (cap > nodes[i].cap)
+        cap = nodes[i].cap;
+
+    // sink tree
+    i=midarc->head;
+    while((a=nodes[i].parent) != TERMINAL) {
+        if (cap > a->cap)
+            cap = a->cap;
+        i = a->head;
+    }
+    if (cap > -nodes[i].cap)
+        cap = -nodes[i].cap;
+
+    return cap;
+}
+
+/// Push flow f through path from source to sink through midarc.
+template <typename captype, typename tcaptype, typename flowtype>
+void Graph<captype,tcaptype,flowtype>::push_flow(arc* midarc, captype f)
+{
+    flow += f;
+    arcs[midarc->sister].cap += f;
+    midarc->cap -= f;
+
+    // source tree
+    node_id i=arcs[midarc->sister].head;
+    arc* a;
+    while((a=nodes[i].parent) != TERMINAL) {
+        a->cap += f;
+        arcs[a->sister].cap -= f;
+        if (!arcs[a->sister].cap)
+            set_orphan(&nodes[i]);
+        i = a->head;
+    }
+    nodes[i].cap -= f;
+    if (!nodes[i].cap)
+        set_orphan(&nodes[i]);
+
+    // sink tree
+    i=midarc->head;
+    while((a=nodes[i].parent) != TERMINAL) {
+        arcs[a->sister].cap += f;
+        a->cap -= f;
+        if (!a->cap)
+            set_orphan(&nodes[i]);
+        i = a->head;
+    }
+    nodes[i].cap += f;
+    if (!nodes[i].cap)
+        set_orphan(&nodes[i]);
+}
+
+/// Push flow through path from source to sink passing through midarc.
+template <typename captype, typename tcaptype, typename flowtype>
+void Graph<captype,tcaptype,flowtype>::augment(arc* midarc)
+{
+    // Orient arc from source tree to sink tree
+    if(nodes[midarc->head].term==SOURCE)
+        midarc = &arcs[midarc->sister];
+
+    captype bottleneck = find_bottleneck(midarc);
+    push_flow(midarc, bottleneck);
 }
 
 /// Number of nodes of path from the root of the tree to node j.
@@ -264,6 +266,4 @@ flowtype Graph<captype,tcaptype,flowtype>::maxflow()
     return flow;
 }
 
-#undef TERMINAL
-#undef ORPHAN
 #endif

@@ -3,7 +3,8 @@
 /// Constructor
 template <typename captype, typename tcaptype, typename flowtype> 
 Graph<captype, tcaptype, flowtype>::Graph()
-: nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0)
+: nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0),
+  TERMINAL(0), ORPHAN(0)
 {}
 
 /// Destructor
