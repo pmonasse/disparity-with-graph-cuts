@@ -1,7 +1,11 @@
 /* image.cpp */
 /* Vladimir Kolmogorov (vnk@cs.cornell.edu), 2001. */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
+#include <cassert>
+#include <fstream>
+#include <sstream>
 #include "image.h"
 #ifdef HAS_PNG
 #include "io_png.h"
@@ -10,12 +14,8 @@
 #include "io_tiff.h"
 #endif
 
-const int ONE = 1;
-const int SWAP_BYTES = (((char *)(&ONE))[0] == 0) ? 1 : 0;
-
-/************************************************************/
-/************************************************************/
-/************************************************************/
+static const int ONE = 1;
+static const int SWAP_BYTES = (((char *)(&ONE))[0] == 0) ? 1 : 0;
 
 void* imNew(ImageType type, int xsize, int ysize)
 {
@@ -27,13 +27,10 @@ void* imNew(ImageType type, int xsize, int ysize)
     if (xsize<=0 || ysize<=0) return NULL;
 
     switch (type) {
-    case IMAGE_BINARY: data_size = sizeof(unsigned char);    break;
     case IMAGE_GRAY:   data_size = sizeof(unsigned char);    break;
-    case IMAGE_SHORT:  data_size = sizeof(short);            break;
     case IMAGE_RGB:    data_size = sizeof(unsigned char[3]); break;
     case IMAGE_INT:    data_size = sizeof(int);              break;
     case IMAGE_FLOAT:  data_size = sizeof(float);            break;
-    case IMAGE_DOUBLE: data_size = sizeof(double);           break;
     default: return NULL;
     }
 
@@ -53,19 +50,13 @@ void* imNew(ImageType type, int xsize, int ysize)
     return im;
 }
 
-/************************************************************/
-/************************************************************/
-/************************************************************/
-
-inline int is_digit(unsigned char c) { return (c>='0' && c<='9'); }
-
 void SwapBytes(GeneralImage im)
 {
     if (SWAP_BYTES) {
         ImageType type = imHeader(im)->type;
 
-        if (type==IMAGE_SHORT || type==IMAGE_INT ||
-            type==IMAGE_FLOAT || type==IMAGE_DOUBLE) {
+        if (type==IMAGE_INT ||
+            type==IMAGE_FLOAT) {
             char *ptr, c;
             int i, k;
 
@@ -88,16 +79,81 @@ void SwapBytes(GeneralImage im)
 /// Load image
 void* imLoad(ImageType type, const char *filename)
 {
+    assert(type==IMAGE_GRAY || type==IMAGE_RGB);
     unsigned char* data=0;
     size_t xsize, ysize;
+    int stepColor=1; // Distance between color planes of same pixel
+    int stepPixel=3; // Distance between consecutive pixels
+
+    const char* ext = strrchr(filename,'.');
+    if(ext && (strcmp(ext,".png")==0)) {
 #ifdef HAS_PNG
-    if(type == IMAGE_GRAY)
-        data = io_png_read_u8_gray(filename, &xsize, &ysize);
-    if(type == IMAGE_RGB)
-        data = io_png_read_u8_rgb(filename, &xsize, &ysize);
-    if(! data)
-        return data;
+        if(type == IMAGE_GRAY)
+            data = io_png_read_u8_gray(filename, &xsize, &ysize);
+        if(type == IMAGE_RGB) {
+            data = io_png_read_u8_rgb(filename, &xsize, &ysize);
+            stepColor=xsize*ysize; // Planar color format
+            stepPixel=1;
+        }
+        if(! data) return 0;
+#else
+        std::cerr << "Unable to read file " << filename << " as PNG since the "
+                  << "program was built without PNG support" << std::endl;
+        return 0;
 #endif
+    }
+
+    if(! data) { // Read PGM or PPM
+        std::ifstream file(filename, std::ifstream::binary);
+        if(! file)
+            return 0;
+        char c;
+        bool text=false;
+        while(file >> c)
+            if(c=='#') { // Skip comments
+                std::string s;
+                getline(file,s);
+                continue;
+            }
+            else if(c=='P') {
+                file >> c;
+                text = (c=='2'||c=='3');
+                c -= 3;
+                if(c=='2' && type==IMAGE_GRAY) break;
+                if(c=='3' && type==IMAGE_RGB) break;
+                return 0;
+            }
+            else return 0;
+        int max=0;
+        if(! (file >> xsize >> ysize >> max)) return 0;
+        assert(max<256);
+        int size = ((type==IMAGE_GRAY? 1: 3) *xsize*ysize);
+        data = (unsigned char*) malloc(size);
+        if(! data) return 0;
+        if(text) { // Read ASCII
+            int read=0;
+            std::string str;
+            while(file >> str) {
+                if(str[0] == '#') {
+                    std::string s;
+                    std::getline(file,s);
+                    continue;
+                }
+                int nb;
+                if(read==size ||
+                   !(std::istringstream(str)>>nb)) {
+                    free(data); return 0;
+                }
+                data[read++] = static_cast<unsigned char>(nb);
+            }
+        } else { // Read binary
+            std::string s;
+            std::getline(file,s);
+            if(! file.read((char*)(data), size)) {
+                free(data); return 0;
+            }
+        }
+    }
 
     GeneralImage im = (GeneralImage) imNew(type, xsize, ysize);
     const size_t size = xsize*ysize;
@@ -105,42 +161,41 @@ void* imLoad(ImageType type, const char *filename)
         for(size_t i=0; i<size; i++)
             imRef((GrayImage)im,i,0) = data[i];
     if(type == IMAGE_RGB) {
-        const size_t r=0*size, g=1*size, b=2*size;
-        for(size_t i=0; i<size; i++) {
-            imRef((RGBImage)im,i,0).r = data[i+r];
-            imRef((RGBImage)im,i,0).g = data[i+g];
-            imRef((RGBImage)im,i,0).b = data[i+b];
+        const size_t r=0*stepColor, g=1*stepColor, b=2*stepColor;
+        for(size_t i=0, j=0; i<size; i++, j+=stepPixel) {
+            imRef((RGBImage)im,i,0).r = data[j+r];
+            imRef((RGBImage)im,i,0).g = data[j+g];
+            imRef((RGBImage)im,i,0).b = data[j+b];
         }
     }
     free(data);
     return im;
 }
 
-/************************************************************/
-/************************************************************/
-/************************************************************/
-
 int imSave(void *im, const char *filename)
 {
     int i;
-    FILE *fp;
     int im_max = 0;
     ImageType type = imHeader(im)->type;
     int xsize = imHeader(im)->xsize, ysize = imHeader(im)->ysize;
     int data_size = imHeader(im)->data_size;
 
+    const char* ext = strrchr(filename,'.');
+    if(ext && (strcmp(ext,".tif")==0||strcmp(ext,".tiff")==0)) {
 #ifdef HAS_TIFF
-    if(type == IMAGE_FLOAT)
-        return io_tiff_write_f32(filename, ((FloatImage)im)->data, xsize, ysize, 1);
+        assert(type==IMAGE_FLOAT);
+        return io_tiff_write_f32(filename,((FloatImage)im)->data,xsize,ysize,1);
+#else
+        std::cerr << "Unable to save file " << filename << " as TIFF since the "
+                  << "program was built without TIFF support. Trying PGM..."
+                  << std::endl;
 #endif
+    }
 
-    fp = fopen(filename, "wb");
+    FILE* fp = fopen(filename, "wb");
     if (!fp) return -1;
 
     switch (type) {
-    case IMAGE_BINARY:
-        fprintf(fp, "P4\n%d %d\n", xsize, ysize);
-        break;
     case IMAGE_GRAY: {
         GrayImage g = (GrayImage)im;
         for (i=0; i<xsize*ysize; i++)
@@ -156,40 +211,18 @@ int imSave(void *im, const char *filename)
         }}
         fprintf(fp, "P6\n%d %d\n%d\n", xsize, ysize, im_max);
         break;
-    case IMAGE_SHORT:
-        fprintf(fp, "Q4\n%d %d\n", xsize, ysize);
-        break;
-    case IMAGE_INT:
-        fprintf(fp, "Q3\n%d %d\n", xsize, ysize);
-        break;
     case IMAGE_FLOAT:
         fprintf(fp, "Q1\n%d %d\n", xsize, ysize);
-        break;
-    case IMAGE_DOUBLE:
-        fprintf(fp, "Q2\n%d %d\n", xsize, ysize);
         break;
     default:
         fclose(fp);
         return -1;
     }
 
-    if (type == IMAGE_BINARY) {
-        int s = (xsize*ysize+7)/8;
-        unsigned char *b = (unsigned char *) malloc(s);
-        if (!b) { fclose(fp); return -1; }
-        for (i=0; i<s; i++) b[i] = 0;
-        for (i=0; i<xsize*ysize; i++)
-            if (((BinaryImage)im)->data[i])
-                b[i/8] ^= (1<<(7-(i%8)));
-        i = fwrite(b, 1, s, fp);
-        free(b);
-        if (i != s) { fclose(fp); return -1; }
-    } else {
-        SwapBytes((GeneralImage)im);
-        i = fwrite(((GeneralImage)im)->data, data_size, xsize*ysize, fp);
-        SwapBytes((GeneralImage)im);
-        if (i != xsize*ysize) { fclose(fp); return -1; }
-    }
+    SwapBytes((GeneralImage)im);
+    i = fwrite(((GeneralImage)im)->data, data_size, xsize*ysize, fp);
+    SwapBytes((GeneralImage)im);
+    if (i != xsize*ysize) { fclose(fp); return -1; }
 
     fclose(fp);
     return 0;

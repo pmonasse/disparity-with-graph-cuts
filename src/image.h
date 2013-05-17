@@ -44,13 +44,10 @@ imFree(gray);
 
 typedef enum
 {
-    IMAGE_BINARY,
     IMAGE_GRAY,
-    IMAGE_SHORT,
     IMAGE_RGB,
     IMAGE_INT,
-    IMAGE_FLOAT,
-    IMAGE_DOUBLE,
+    IMAGE_FLOAT
 } ImageType;
 
 typedef struct ImageHeader_st
@@ -60,23 +57,12 @@ typedef struct ImageHeader_st
     int xsize, ysize;
 } ImageHeader;
 
-typedef struct GeneralImage_st { void                              *data; }
-    *GeneralImage;
+typedef struct GeneralImage_t {void*data;} *GeneralImage;
 
-typedef struct BinaryImage_st  { unsigned char                     *data; }
-    *BinaryImage;
-typedef struct GrayImage_st    { unsigned char                     *data; }
-    *GrayImage;
-typedef struct ShortImage_st   { short                             *data; }
-    *ShortImage;
-typedef struct RGBImage_st     { struct { unsigned char r, g, b; } *data; }
-    *RGBImage;
-typedef struct IntImage_st    { int                                *data; }
-    *IntImage;
-typedef struct FloatImage_st   { float                             *data; }
-    *FloatImage;
-typedef struct DoubleImage_st  { double                            *data; }
-    *DoubleImage;
+typedef struct GrayImage_t  {unsigned char                 *data;} *GrayImage;
+typedef struct RGBImage_t   {struct {unsigned char r,g,b;} *data;} *RGBImage;
+typedef struct IntImage_t   {int                           *data;} *IntImage;
+typedef struct FloatImage_t {float                         *data;} *FloatImage;
 
 #define imHeader(im) ((ImageHeader*) ( ((char*)(im)) - sizeof(ImageHeader) ))
 
