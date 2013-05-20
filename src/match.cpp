@@ -1,67 +1,64 @@
-/* match.cpp */
-/* Vladimir Kolmogorov (vnk@cs.cornell.edu), 2001-2003. */
+/**
+ * @file match.cpp
+ * @brief Disparity estimation by Kolomogorov-Zabih algorithm
+ * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * All rights reserved.
+ * 
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Pulic License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "match.h"
 #include "nan.h"
+#include <limits>
 #include <iostream>
 #include <iomanip>
 #include <cassert>
 
+const int Match::OCCLUDED = std::numeric_limits<int>::max();
+
 /// Constructor
 Match::Match(GeneralImage left, GeneralImage right, bool color)
 {
+    imSizeL = Coord(imGetXSize(left),imGetYSize(left));
+    imSizeR = Coord(imGetXSize(right),imGetYSize(right));
+
     if (!color) {
-        im_color_left = im_color_right = NULL;
-        im_color_left_min = im_color_right_min = NULL;
-        im_color_left_max = im_color_right_max = NULL;
+        im_color_left = im_color_right = 0;
+        im_color_left_min = im_color_right_min = 0;
+        im_color_left_max = im_color_right_max = 0;
 
-        im_left  = (GrayImage)left;
-        im_right = (GrayImage)right;
-
-        im_size.x = imGetXSize(im_left); im_size.y = imGetYSize(im_left);
-
-        if(im_size.x!=imGetXSize(im_right) ||
-           im_size.y!=imGetYSize(im_right) ) {
-            std::cerr << "Image sizes are different!" << std::endl;
-            exit(1);
-        }
-
+        im_left  = (GrayImage)left; im_right = (GrayImage)right;
         im_left_min = im_left_max = im_right_min = im_right_max = 0;
     } else {
-            im_left = im_right = NULL;
-            im_left_min = im_right_min = NULL;
-            im_left_max = im_right_max = NULL;
+        im_left = im_right = 0;
+        im_left_min = im_right_min = 0;
+        im_left_max = im_right_max = 0;
 
-            im_color_left = (RGBImage)left;
-            im_color_right = (RGBImage)right;
+        im_color_left = (RGBImage)left;
+        im_color_right = (RGBImage)right;
 
-            im_size.x = imGetXSize(im_color_left);
-            im_size.y = imGetYSize(im_color_left);
-
-            if(im_size.x!=imGetXSize(im_color_right) ||
-               im_size.y!=imGetYSize(im_color_right)) {
-                std::cerr << "Image sizes are different!" << std::endl;
-                exit(1);
-            }
-
-            im_color_left_min = im_color_left_max = 0;
-            im_color_right_min = im_color_right_max = 0;
-        }
+        im_color_left_min = im_color_left_max = 0;
+        im_color_right_min = im_color_right_max = 0;
+    }
 
     dispMin = dispMax = 0;
 
-    x_left  = (IntImage)imNew(IMAGE_INT, im_size.x, im_size.y);
-    x_right = (IntImage)imNew(IMAGE_INT, im_size.x, im_size.y);
-    if (!x_left || !x_right)
+    x_left  = (IntImage)imNew(IMAGE_INT, imSizeL);
+    x_right = (IntImage)imNew(IMAGE_INT, imSizeR);
+
+    vars0 = (IntImage)imNew(IMAGE_INT, imSizeL);
+    varsA = (IntImage)imNew(IMAGE_INT, imSizeL);
+    if (!x_left || !x_right || !vars0 || !varsA)
         { std::cerr << "Not enough memory!" << std::endl; exit(1); }
-
-    Coord p;
-    for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++)
-            IMREF(x_left, p) = IMREF(x_right, p) = OCCLUDED;
-
-    vars0 = (IntImage)imNew(IMAGE_INT, im_size.x, im_size.y);
-    varsA = (IntImage)imNew(IMAGE_INT, im_size.x, im_size.y);
 }
 
 /// Destructor
@@ -87,10 +84,10 @@ Match::~Match()
 void Match::SaveXLeft(const char *file_name)
 {
     Coord p;
-    FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, im_size.x,im_size.y);
+    FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, imSizeL);
 
-    for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++) {
+    for (p.y=0; p.y<imSizeL.y; p.y++)
+        for (p.x=0; p.x<imSizeL.x; p.x++) {
             int d=IMREF(x_left,p);
             IMREF(out,p) = (d==OCCLUDED? NaN: static_cast<float>(d));
         }
@@ -103,12 +100,12 @@ void Match::SaveXLeft(const char *file_name)
 /// flag: lowest disparity should appear darkest (true) or brightest (false).
 void Match::SaveScaledXLeft(const char *file_name, bool flag)
 {
-    RGBImage im = (RGBImage)imNew(IMAGE_RGB, im_size.x, im_size.y);
+    RGBImage im = (RGBImage)imNew(IMAGE_RGB, imSizeL);
     const int dispSize = dispMax-dispMin+1;
 
     Coord p;
-    for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++) {
+    for (p.y=0; p.y<imSizeL.y; p.y++)
+        for (p.x=0; p.x<imSizeL.x; p.x++) {
             int d = IMREF(x_left, p), c;
             if (d==OCCLUDED) {
                 IMREF(im, p).r=0; IMREF(im, p).g=IMREF(im, p).b=255;
@@ -125,14 +122,21 @@ void Match::SaveScaledXLeft(const char *file_name, bool flag)
 }
 
 /// Specify disparity range
-void Match::SetDispRange(int _disp_base, int _disp_max)
+void Match::SetDispRange(int disp_min, int disp_max)
 {
-    dispMin = _disp_base;
-    dispMax = _disp_max;
+    dispMin = disp_min;
+    dispMax = disp_max;
     if (! (dispMin<=dispMax) ) {
         std::cerr << "Error: wrong disparity range!\n" << std::endl;
         exit(1);
     }
+    Coord p;
+    for (p.y=0; p.y<imSizeL.y; p.y++)
+        for (p.x=0; p.x<imSizeL.x; p.x++)
+            IMREF(x_left,  p) = OCCLUDED;
+    for (p.y=0; p.y<imSizeR.y; p.y++)
+        for (p.x=0; p.x<imSizeR.x; p.x++)
+            IMREF(x_right, p) = OCCLUDED;
 }
 
 /// Main algorithm

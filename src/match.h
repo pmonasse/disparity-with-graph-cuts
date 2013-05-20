@@ -1,39 +1,26 @@
-/* match.h */
-/* Vladimir Kolmogorov (vnk@cs.cornell.edu), 2001-2003. */
+/**
+ * @file match.h
+ * @brief Disparity estimation by Kolomogorov-Zabih algorithm
+ * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * All rights reserved.
+ * 
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Pulic License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#ifndef __MATCH_H__
-#define __MATCH_H__
+#ifndef MATCH_H
+#define MATCH_H
 
 #include "image.h"
 class Energy;
-
-/// Pixel coordinates with basic operations.
-struct Coord
-{
-    int x, y;
-
-    Coord() {}
-    Coord(int a, int b) { x = a; y = b; }
-
-    Coord operator- ()        { return Coord(-x, -y); }
-    Coord operator+ (Coord a) { return Coord(x + a.x, y + a.y); }
-    Coord operator- (Coord a) { return Coord(x - a.x, y - a.y); }
-    Coord operator+ (int a) { return Coord(x+a,y); }
-    Coord operator- (int a) { return Coord(x-a,y); }
-    bool  operator< (Coord a) { return (x <  a.x) && (y <  a.y); }
-    bool  operator<=(Coord a) { return (x <= a.x) && (y <= a.y); }
-    bool  operator> (Coord a) { return (x >  a.x) && (y >  a.y); }
-    bool  operator>=(Coord a) { return (x >= a.x) && (y >= a.y); }
-    bool  operator==(Coord a) { return (x == a.x) && (y == a.y); }
-    bool  operator!=(Coord a) { return (x != a.x) || (y != a.y); }
-};
-/// Value of image im at pixel p
-#define IMREF(im, p) (imRef((im), (p).x, (p).y))
-
-///< (half of) the neighborhood system.
-/// The full neighborhood system is edges in NEIGHBORS plus reversed edges
-const struct Coord NEIGHBORS[] = { Coord(-1,0), Coord(0,1) };
-#define NEIGHBOR_NUM (sizeof(NEIGHBORS) / sizeof(Coord))
 
 /// Main class for Kolmogorov-Zabih algorithm
 class Match
@@ -70,7 +57,7 @@ public:
     void SaveScaledXLeft(const char *file_name, bool flag); ///< Save as PPM
 
 private:
-    Coord im_size; ///< Image dimensions
+    Coord imSizeL, imSizeR; ///< Image dimensions
     GrayImage im_left, im_right; ///< Original images (if gray)
     RGBImage im_color_left, im_color_right; ///< Original images (if color)
     GrayImage im_left_min, im_left_max;   ///< Range of gray based on neighbors
@@ -79,7 +66,7 @@ private:
     RGBImage im_color_right_min, im_color_right_max;
     int dispMin, dispMax; ///< range of disparities
 
-#define OCCLUDED 255 ///< Special value of disparity meaning occlusion
+    static const int OCCLUDED; ///< Special value of disparity meaning occlusion
     /// if l - pixel in the left image, r - pixel in the right image, then
     /// r == l + Coord(IMREF(x_left,  l), l.y)
     /// l == r + Coord(IMREF(x_right, r), r.y)
@@ -108,9 +95,10 @@ private:
     void  ExpansionMove(int a);
 
     // Graph construction
-    void build_nodes     (Energy& e, Coord p, int a);
-    void build_uniqueness(Energy& e, Coord p, int a);
-    void build_smoothness(Energy& e, Coord p, Coord np, int a);
+    void build_nodes        (Energy& e, Coord p, int a);
+    void build_smoothness   (Energy& e, Coord p, Coord np, int a);
+    void build_uniqueness_LR(Energy& e, Coord p);
+    void build_uniqueness_RL(Energy& e, Coord p, int a);
     void update_disparity(const Energy& e, int a);
 };
 

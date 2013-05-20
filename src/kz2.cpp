@@ -1,8 +1,28 @@
-/* kz2.cpp */
-/* Vladimir Kolmogorov (vnk@cs.cornell.edu), 2001-2003. */
+/**
+ * @file kz2.cpp
+ * @brief Graph representation of alpha-expansion
+ * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * All rights reserved.
+ * 
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Pulic License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "match.h"
 #include "energy.h"
+
+/// (half of) the neighborhood system.
+/// The full neighborhood system is edges in NEIGHBORS plus reversed edges.
+const struct Coord NEIGHBORS[] = { Coord(-1,0), Coord(0,1) };
+#define NEIGHBOR_NUM (sizeof(NEIGHBORS) / sizeof(Coord))
 
 /// Compute the data+occlusion penalty (D(a)-K)
 int Match::data_occlusion_penalty(Coord l, Coord r) const
@@ -26,20 +46,20 @@ int Match::ComputeEnergy() const
     int E = 0;
 
     Coord p;
-    for(p.y=0; p.y<im_size.y; p.y++)
-        for(p.x=0; p.x<im_size.x; p.x++) {
+    for(p.y=0; p.y<imSizeL.y; p.y++)
+        for(p.x=0; p.x<imSizeL.x; p.x++) {
             int d = IMREF(x_left, p);
             if (d != OCCLUDED)
                 E += data_occlusion_penalty(p, p+d);
 
             for (unsigned int k=0; k<NEIGHBOR_NUM; k++) {
                 Coord np = p + NEIGHBORS[k];
-                if (np>=Coord(0,0) && np<im_size) {
+                if (np>=Coord(0,0) && np<imSizeL) {
                     int nd = IMREF(x_left, np);
                     if(d == nd) continue; // smoothness satisfied
-                    if( d!=OCCLUDED && np+d>=Coord(0,0) && np+d<im_size)
+                    if( d!=OCCLUDED && np+d>=Coord(0,0) && np+d<imSizeR)
                         E += smoothness_penalty(p, np, d);
-                    if(nd!=OCCLUDED && p+nd>=Coord(0,0) && p+nd<im_size)
+                    if(nd!=OCCLUDED && p+nd>=Coord(0,0) && p+nd<imSizeR)
                         E += smoothness_penalty(p, np, nd);
                 }
             }
@@ -73,7 +93,7 @@ void Match::build_nodes(Energy& e, Coord p, int a) {
         e.add_variable(data_occlusion_penalty(p, pd), 0): VAR_NONPRESENT;
 
     Coord pa = p+a;
-    IMREF(varsA, p) = (pa>=Coord(0,0)&&pa<im_size)? // assignment (p,p+a) in A^a
+    IMREF(varsA, p) = (pa>=Coord(0,0)&&pa<imSizeR)? // assignment (p,p+a) in A^a
         e.add_variable(0, data_occlusion_penalty(p, pa)): VAR_NONPRESENT;
 }
 
@@ -100,7 +120,7 @@ void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
     }
 
     // disparity d (if not a)
-    if(IS_VAR(var0) && np+d>=Coord(0,0) && np+d<im_size) {
+    if(IS_VAR(var0) && np+d>=Coord(0,0) && np+d<imSizeR) {
         int delta = smoothness_penalty(p, np, d);
         if(d == nd) // Penalize different activity
             e.add_term2(var0, nvar0, 0, delta, delta, 0);
@@ -109,31 +129,34 @@ void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
     }
 
     // disparity nd (not a or d): (p,p+nd) inactive, penalize (np,p+nd) active
-    if(IS_VAR(nvar0) && d!=nd && p+nd>=Coord(0,0) && p+nd<im_size) {
+    if(IS_VAR(nvar0) && d!=nd && p+nd>=Coord(0,0) && p+nd<imSizeR) {
         int delta = smoothness_penalty(p, np, nd);
         e.add_term1(nvar0, delta, 0);
     }
 }
 
-/// Build edges in graph enforcing uniqueness at pixel p
-void Match::build_uniqueness(Energy& e, Coord p, int a) {
-    const int INF = 10000; /// Infinite capacity
+static const int INF = 10000; ///< Infinite capacity
 
+/// Build edges in graph enforcing uniqueness at pixel p.
+/// Prevent (p,p+d) and (p,p+a) from being both active.
+void Match::build_uniqueness_LR(Energy& e, Coord p) {
     Energy::Var var0 = (Energy::Var) IMREF(vars0, p);
     Energy::Var varA = (Energy::Var) IMREF(varsA, p);
-    
-    // Prevent (p,p+d) and (p,p+a) from being both active
+
     if(IS_VAR(var0) && varA!=VAR_NONPRESENT)
         e.add_term2(var0, varA, 0, INF, 0, 0);
+}
 
-    // Prevent (q-d,q) and (q-a,q) from being both active
+/// Build edges in graph enforcing uniqueness at pixel p.
+/// Prevent (p-d,p) and (p-a,p) from being both active.
+void Match::build_uniqueness_RL(Energy& e, Coord p, int a) {
     int d = IMREF(x_right, p);
     if(d==OCCLUDED) return;
-    var0 = (Energy::Var) IMREF(vars0, p+d);
+    Energy::Var var0 = (Energy::Var) IMREF(vars0, p+d);
     if(var0!=VAR_ACTIVE) {
         Coord pa = p-a;
-        if (pa>=Coord(0,0) && pa<im_size) {
-            varA = (Energy::Var) IMREF(varsA, pa);
+        if (pa>=Coord(0,0) && pa<imSizeL) {
+            Energy::Var varA = (Energy::Var) IMREF(varsA, pa);
             e.add_term2(var0, varA, 0, INF, 0, 0);
         }
     }
@@ -143,14 +166,14 @@ void Match::build_uniqueness(Energy& e, Coord p, int a) {
 /// We need to set x_right for smoothness term in next expansion move.
 void Match::update_disparity(const Energy& e, int a) {
     Coord p;
-    for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++) {
+    for (p.y=0; p.y<imSizeL.y; p.y++)
+        for (p.x=0; p.x<imSizeL.x; p.x++) {
             Energy::Var var0 = (Energy::Var) IMREF(vars0, p);
             if(IS_VAR(var0) && e.get_var(var0)==1)
                 IMREF(x_left,p) = IMREF(x_right, p+IMREF(x_left,p)) = OCCLUDED;
         }
-    for (p.y=0; p.y<im_size.y; p.y++)
-        for (p.x=0; p.x<im_size.x; p.x++) {
+    for (p.y=0; p.y<imSizeL.y; p.y++)
+        for (p.x=0; p.x<imSizeL.x; p.x++) {
             Energy::Var varA = (Energy::Var) IMREF(varsA, p);
             if(IS_VAR(varA) && e.get_var(varA)==1) // New disparity
                 IMREF(x_right, p+a) = -(IMREF(x_left, p) = a);
@@ -164,19 +187,24 @@ void Match::ExpansionMove(int a)
 
     // Build graph
     Coord p;
-    for(p.y=0; p.y<im_size.y; p.y++)
-        for(p.x=0; p.x<im_size.x; p.x++)
+    for(p.y=0; p.y<imSizeL.y; p.y++)
+        for(p.x=0; p.x<imSizeL.x; p.x++)
             build_nodes(e, p, a);
 
-    for(p.y=0; p.y<im_size.y; p.y++)
-        for(p.x=0; p.x<im_size.x; p.x++) {
+    for(p.y=0; p.y<imSizeL.y; p.y++)
+        for(p.x=0; p.x<imSizeL.x; p.x++)
             for(unsigned int k=0; k<NEIGHBOR_NUM; k++) {
                 Coord np = p+NEIGHBORS[k];
-                if(np>=Coord(0,0) && np<im_size)
+                if(np>=Coord(0,0) && np<imSizeL)
                     build_smoothness(e, p, np, a);
             }
-            build_uniqueness(e, p, a);
-        }
+
+    for(p.y=0; p.y<imSizeL.y; p.y++)
+        for(p.x=0; p.x<imSizeL.x; p.x++)
+            build_uniqueness_LR(e, p);
+    for(p.y=0; p.y<imSizeR.y; p.y++)
+        for(p.x=0; p.x<imSizeR.x; p.x++)
+            build_uniqueness_RL(e, p, a);
 
     int oldE=E;
     E = e.minimize(); // Max-flow, give the lowest-energy expansion move

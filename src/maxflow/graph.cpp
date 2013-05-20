@@ -1,3 +1,22 @@
+/**
+ * @file graph.cpp
+ * @brief Graph structure
+ * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
+ *         Pascal Monasse <monasse@imagine.enpc.fr>
+ * 
+ * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * All rights reserved.
+ * 
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * You should have received a copy of the GNU General Pulic License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// Do not compile when not included from graph.h
 #ifdef GRAPH_H
 
 /// Constructor
@@ -54,6 +73,7 @@ void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
                                                     tcaptype capSource,
                                                     tcaptype capSink)
 {
+    assert(0<=i && i<(int)nodes.size());
     tcaptype delta = nodes[i].cap;
     if (delta > 0) capSource += delta;
     else           capSink   -= delta;
