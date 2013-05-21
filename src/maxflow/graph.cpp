@@ -19,12 +19,16 @@
 // Do not compile when not included from graph.h
 #ifdef GRAPH_H
 
-/// Constructor
+/// Constructor.
+/// For efficiency, it is advised to give appropriate hint sizes.
 template <typename captype, typename tcaptype, typename flowtype> 
-Graph<captype, tcaptype, flowtype>::Graph()
+Graph<captype, tcaptype, flowtype>::Graph(int hintNbNodes, int hintNbArcs)
 : nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0),
   TERMINAL(0), ORPHAN(0)
-{}
+{
+    nodes.reserve(hintNbNodes);
+    arcs.reserve(hintNbArcs);
+}
 
 /// Destructor
 template <typename captype, typename tcaptype, typename flowtype> 

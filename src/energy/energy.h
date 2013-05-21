@@ -88,7 +88,7 @@ public:
     typedef short Value; ///< Type of a value in a single term
     typedef int TotalValue; ///< Type of a value of the total energy
 
-    Energy();
+    Energy(int hintNbNodes=0, int hintNbArcs=0);
     ~Energy();
 
     Var add_variable(Value E0=0, Value E1=0);
@@ -103,9 +103,10 @@ private:
     TotalValue Econst; ///< Constant added to the energy
 };
 
-/// Constructor
-inline Energy::Energy()
-: Graph(), Econst(0)
+/// Constructor.
+/// For efficiency, it is advised to give appropriate hint sizes.
+inline Energy::Energy(int hintNbNodes, int hintNbArcs)
+: Graph(hintNbNodes, hintNbArcs), Econst(0)
 {}
 
 /// Destructor

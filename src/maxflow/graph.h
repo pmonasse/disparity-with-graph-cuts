@@ -55,7 +55,7 @@ public:
     typedef int node_id;
     typedef int arc_id;
 
-    Graph();
+    Graph(int hintNbNodes=0, int hintNbArcs=0);
     virtual ~Graph();
 
     node_id add_node();

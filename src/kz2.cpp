@@ -183,7 +183,8 @@ void Match::update_disparity(const Energy& e, int a) {
 /// Compute the minimum a-expansion configuration
 void Match::ExpansionMove(int a)
 { 
-    Energy e;
+    // Factors 2 and 11 determined experimentally
+    Energy e(2*imSizeL.x*imSizeL.y, 11*imSizeL.x*imSizeL.y);
 
     // Build graph
     Coord p;
