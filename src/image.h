@@ -97,17 +97,17 @@ struct Coord
     Coord() {}
     Coord(int a, int b) { x = a; y = b; }
 
-    Coord operator- ()        { return Coord(-x, -y); }
-    Coord operator+ (Coord a) { return Coord(x + a.x, y + a.y); }
-    Coord operator- (Coord a) { return Coord(x - a.x, y - a.y); }
-    Coord operator+ (int a) { return Coord(x+a,y); }
-    Coord operator- (int a) { return Coord(x-a,y); }
-    bool  operator< (Coord a) { return (x <  a.x) && (y <  a.y); }
-    bool  operator<=(Coord a) { return (x <= a.x) && (y <= a.y); }
-    bool  operator> (Coord a) { return (x >  a.x) && (y >  a.y); }
-    bool  operator>=(Coord a) { return (x >= a.x) && (y >= a.y); }
-    bool  operator==(Coord a) { return (x == a.x) && (y == a.y); }
-    bool  operator!=(Coord a) { return (x != a.x) || (y != a.y); }
+    Coord operator- ()        const { return Coord(-x, -y); }
+    Coord operator+ (Coord a) const { return Coord(x + a.x, y + a.y); }
+    Coord operator- (Coord a) const { return Coord(x - a.x, y - a.y); }
+    Coord operator+ (int a)   const { return Coord(x+a,y); }
+    Coord operator- (int a)   const { return Coord(x-a,y); }
+    bool  operator< (Coord a) const { return (x <  a.x) && (y <  a.y); }
+    bool  operator<=(Coord a) const { return (x <= a.x) && (y <= a.y); }
+    bool  operator> (Coord a) const { return (x >  a.x) && (y >  a.y); }
+    bool  operator>=(Coord a) const { return (x >= a.x) && (y >= a.y); }
+    bool  operator==(Coord a) const { return (x == a.x) && (y == a.y); }
+    bool  operator!=(Coord a) const { return (x != a.x) || (y != a.y); }
 };
 /// Value of image im at pixel p
 #define IMREF(im, p) (imRef((im), (p).x, (p).y))
@@ -115,6 +115,33 @@ struct Coord
 /// Overload with parameter of type Coord
 inline void * imNew(ImageType type, Coord size) {
     return imNew(type, size.x, size.y);
+}
+
+/// Is p inside rectangle r?
+inline bool inRect(Coord p, Coord r) {
+    return (Coord(0,0)<=p && p<r);
+}
+
+/// Rectangle iterator
+class RectIterator {
+    Coord p; ///< Current point
+    int w; ///< Width of rectangle
+public:
+    RectIterator(Coord rect): p(0,0), w(rect.x) {}
+    const Coord& operator*() const { return p; }
+    bool operator!=(const RectIterator& it) const { return (p!=it.p); }
+    bool operator==(const RectIterator& it) const { return (p==it.p); }
+    RectIterator& operator++() { if(++p.x==w){p.x=0;++p.y;} return *this; }
+
+    friend RectIterator rectBegin(Coord rect);
+    friend RectIterator rectEnd(Coord rect);
+};
+
+inline RectIterator rectBegin(Coord rect) { return RectIterator(rect); }
+inline RectIterator rectEnd(Coord rect) {
+    RectIterator it(rect);
+    it.p.y = rect.y;
+    return it;
 }
 
 #endif

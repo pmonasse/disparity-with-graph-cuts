@@ -83,14 +83,13 @@ Match::~Match()
 /// Save disparity map as float TIFF image
 void Match::SaveXLeft(const char *file_name)
 {
-    Coord p;
     FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, imSizeL);
 
-    for (p.y=0; p.y<imSizeL.y; p.y++)
-        for (p.x=0; p.x<imSizeL.x; p.x++) {
-            int d=IMREF(x_left,p);
-            IMREF(out,p) = (d==OCCLUDED? NaN: static_cast<float>(d));
-        }
+    RectIterator end=rectEnd(imSizeL);
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
+        int d=IMREF(x_left,*p);
+        IMREF(out,*p) = (d==OCCLUDED? NaN: static_cast<float>(d));
+    }
 
     imSave(out, file_name);
     imFree(out);
@@ -103,19 +102,18 @@ void Match::SaveScaledXLeft(const char *file_name, bool flag)
     RGBImage im = (RGBImage)imNew(IMAGE_RGB, imSizeL);
     const int dispSize = dispMax-dispMin+1;
 
-    Coord p;
-    for (p.y=0; p.y<imSizeL.y; p.y++)
-        for (p.x=0; p.x<imSizeL.x; p.x++) {
-            int d = IMREF(x_left, p), c;
-            if (d==OCCLUDED) {
-                IMREF(im, p).r=0; IMREF(im, p).g=IMREF(im, p).b=255;
-            } else {
-                if (dispSize == 0) c = 255;
-                else if (flag) c = 255 - (255-64)*(dispMax - d)/dispSize;
-                else           c = 255 - (255-64)*(d - dispMin)/dispSize;
-                IMREF(im,p).r=IMREF(im,p).g=IMREF(im,p).b = c;
-            }
+    RectIterator end=rectEnd(imSizeL);
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
+        int d = IMREF(x_left,*p), c;
+        if (d==OCCLUDED) {
+            IMREF(im,*p).r=0; IMREF(im,*p).g=IMREF(im,*p).b=255;
+        } else {
+            if (dispSize == 0) c = 255;
+            else if (flag) c = 255 - (255-64)*(dispMax - d)/dispSize;
+            else           c = 255 - (255-64)*(d - dispMin)/dispSize;
+            IMREF(im,*p).r=IMREF(im,*p).g=IMREF(im,*p).b = c;
         }
+    }
 
     imSave(im, file_name);
     imFree(im);
@@ -130,13 +128,12 @@ void Match::SetDispRange(int disp_min, int disp_max)
         std::cerr << "Error: wrong disparity range!\n" << std::endl;
         exit(1);
     }
-    Coord p;
-    for (p.y=0; p.y<imSizeL.y; p.y++)
-        for (p.x=0; p.x<imSizeL.x; p.x++)
-            IMREF(x_left,  p) = OCCLUDED;
-    for (p.y=0; p.y<imSizeR.y; p.y++)
-        for (p.x=0; p.x<imSizeR.x; p.x++)
-            IMREF(x_right, p) = OCCLUDED;
+    RectIterator end=rectEnd(imSizeL);
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p)
+        IMREF(x_left, *p) = OCCLUDED;
+    end = rectEnd(imSizeR);
+    for(RectIterator p=rectBegin(imSizeR); p!=end; ++p)
+        IMREF(x_right,*p) = OCCLUDED;
 }
 
 /// Main algorithm

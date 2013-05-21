@@ -45,25 +45,24 @@ int Match::ComputeEnergy() const
 {
     int E = 0;
 
-    Coord p;
-    for(p.y=0; p.y<imSizeL.y; p.y++)
-        for(p.x=0; p.x<imSizeL.x; p.x++) {
-            int d = IMREF(x_left, p);
-            if (d != OCCLUDED)
-                E += data_occlusion_penalty(p, p+d);
+    RectIterator end=rectEnd(imSizeL);
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
+        int d = IMREF(x_left,*p);
+        if (d != OCCLUDED)
+            E += data_occlusion_penalty(*p, *p+d);
 
-            for (unsigned int k=0; k<NEIGHBOR_NUM; k++) {
-                Coord np = p + NEIGHBORS[k];
-                if (np>=Coord(0,0) && np<imSizeL) {
-                    int nd = IMREF(x_left, np);
-                    if(d == nd) continue; // smoothness satisfied
-                    if( d!=OCCLUDED && np+d>=Coord(0,0) && np+d<imSizeR)
-                        E += smoothness_penalty(p, np, d);
-                    if(nd!=OCCLUDED && p+nd>=Coord(0,0) && p+nd<imSizeR)
-                        E += smoothness_penalty(p, np, nd);
-                }
+        for (unsigned int k=0; k<NEIGHBOR_NUM; k++) {
+            Coord np = *p + NEIGHBORS[k];
+            if (inRect(np,imSizeL)) {
+                int nd = IMREF(x_left, np);
+                if(d == nd) continue; // smoothness satisfied
+                if( d!=OCCLUDED && inRect(np+d,imSizeR))
+                    E += smoothness_penalty(*p, np, d);
+                if(nd!=OCCLUDED && inRect(*p+nd,imSizeR))
+                    E += smoothness_penalty(*p, np, nd);
             }
         }
+    }
 
     return E;
 }
@@ -93,7 +92,7 @@ void Match::build_nodes(Energy& e, Coord p, int a) {
         e.add_variable(data_occlusion_penalty(p, pd), 0): VAR_NONPRESENT;
 
     Coord pa = p+a;
-    IMREF(varsA, p) = (pa>=Coord(0,0)&&pa<imSizeR)? // assignment (p,p+a) in A^a
+    IMREF(varsA, p) = inRect(pa,imSizeR)? // assignment (p,p+a) in A^a
         e.add_variable(0, data_occlusion_penalty(p, pa)): VAR_NONPRESENT;
 }
 
@@ -120,7 +119,7 @@ void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
     }
 
     // disparity d (if not a)
-    if(IS_VAR(var0) && np+d>=Coord(0,0) && np+d<imSizeR) {
+    if(IS_VAR(var0) && inRect(np+d,imSizeR)) {
         int delta = smoothness_penalty(p, np, d);
         if(d == nd) // Penalize different activity
             e.add_term2(var0, nvar0, 0, delta, delta, 0);
@@ -129,7 +128,7 @@ void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
     }
 
     // disparity nd (not a or d): (p,p+nd) inactive, penalize (np,p+nd) active
-    if(IS_VAR(nvar0) && d!=nd && p+nd>=Coord(0,0) && p+nd<imSizeR) {
+    if(IS_VAR(nvar0) && d!=nd && inRect(p+nd,imSizeR)) {
         int delta = smoothness_penalty(p, np, nd);
         e.add_term1(nvar0, delta, 0);
     }
@@ -155,7 +154,7 @@ void Match::build_uniqueness_RL(Energy& e, Coord p, int a) {
     Energy::Var var0 = (Energy::Var) IMREF(vars0, p+d);
     if(var0!=VAR_ACTIVE) {
         Coord pa = p-a;
-        if (pa>=Coord(0,0) && pa<imSizeL) {
+        if (inRect(pa,imSizeL)) {
             Energy::Var varA = (Energy::Var) IMREF(varsA, pa);
             e.add_term2(var0, varA, 0, INF, 0, 0);
         }
@@ -165,19 +164,17 @@ void Match::build_uniqueness_RL(Energy& e, Coord p, int a) {
 /// Update the disparity map according to min cut of energy.
 /// We need to set x_right for smoothness term in next expansion move.
 void Match::update_disparity(const Energy& e, int a) {
-    Coord p;
-    for (p.y=0; p.y<imSizeL.y; p.y++)
-        for (p.x=0; p.x<imSizeL.x; p.x++) {
-            Energy::Var var0 = (Energy::Var) IMREF(vars0, p);
-            if(IS_VAR(var0) && e.get_var(var0)==1)
-                IMREF(x_left,p) = IMREF(x_right, p+IMREF(x_left,p)) = OCCLUDED;
-        }
-    for (p.y=0; p.y<imSizeL.y; p.y++)
-        for (p.x=0; p.x<imSizeL.x; p.x++) {
-            Energy::Var varA = (Energy::Var) IMREF(varsA, p);
-            if(IS_VAR(varA) && e.get_var(varA)==1) // New disparity
-                IMREF(x_right, p+a) = -(IMREF(x_left, p) = a);
-        }
+    RectIterator end=rectEnd(imSizeL);
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
+        Energy::Var var0 = (Energy::Var) IMREF(vars0,*p);
+        if(IS_VAR(var0) && e.get_var(var0)==1)
+            IMREF(x_left,*p) = IMREF(x_right,*p+IMREF(x_left,*p)) = OCCLUDED;
+    }
+    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
+        Energy::Var varA = (Energy::Var) IMREF(varsA,*p);
+        if(IS_VAR(varA) && e.get_var(varA)==1) // New disparity
+            IMREF(x_right,*p+a) = -(IMREF(x_left,*p) = a);
+    }
 }
 
 /// Compute the minimum a-expansion configuration
@@ -187,25 +184,21 @@ void Match::ExpansionMove(int a)
     Energy e(2*imSizeL.x*imSizeL.y, 11*imSizeL.x*imSizeL.y);
 
     // Build graph
-    Coord p;
-    for(p.y=0; p.y<imSizeL.y; p.y++)
-        for(p.x=0; p.x<imSizeL.x; p.x++)
-            build_nodes(e, p, a);
+    RectIterator endL=rectEnd(imSizeL), endR=rectEnd(imSizeR);
+    for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
+        build_nodes(e, *p, a);
 
-    for(p.y=0; p.y<imSizeL.y; p.y++)
-        for(p.x=0; p.x<imSizeL.x; p.x++)
-            for(unsigned int k=0; k<NEIGHBOR_NUM; k++) {
-                Coord np = p+NEIGHBORS[k];
-                if(np>=Coord(0,0) && np<imSizeL)
-                    build_smoothness(e, p, np, a);
-            }
+    for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
+        for(unsigned int k=0; k<NEIGHBOR_NUM; k++) {
+            Coord np = *p+NEIGHBORS[k];
+            if(inRect(np,imSizeL))
+                build_smoothness(e, *p, np, a);
+        }
 
-    for(p.y=0; p.y<imSizeL.y; p.y++)
-        for(p.x=0; p.x<imSizeL.x; p.x++)
-            build_uniqueness_LR(e, p);
-    for(p.y=0; p.y<imSizeR.y; p.y++)
-        for(p.x=0; p.x<imSizeR.x; p.x++)
-            build_uniqueness_RL(e, p, a);
+    for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
+        build_uniqueness_LR(e, *p);
+    for(RectIterator p=rectBegin(imSizeR); p!=endR; ++p)
+        build_uniqueness_RL(e, *p, a);
 
     int oldE=E;
     E = e.minimize(); // Max-flow, give the lowest-energy expansion move
