@@ -86,7 +86,7 @@ int gcd(int a, int b) {
 /// - K may be computed automatically and lambda set to K/5.
 /// - lambda1=3*lambda, lambda2=lambda
 /// As the graph requires integer weights, use fractions and common denominator.
-void fix_parameters(Match& m, Match::Parameters params, int lambda) {
+void fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
     if(lambda<0) { // Set lambda to K/5
         float K = params.K/(float)params.denominator;
         if(params.K<=0) { // Automatic computation of K
@@ -214,6 +214,13 @@ int main(int argc, char *argv[]) {
             m.SaveXLeft(argv[5]);
         if(! sDisp.empty())
             m.SaveScaledXLeft(sDisp.c_str(), false);
+    } else {
+        std::cout << "K=" << params.K;
+        if(params.denominator!=1) std::cout << "/" << params.denominator;
+        std::cout << std::endl;
+        std::cout << "lambda=" << lambda;
+        if(params.denominator!=1) std::cout << "/" << params.denominator;
+        std::cout << std::endl;
     }
 
     imFree(im1);

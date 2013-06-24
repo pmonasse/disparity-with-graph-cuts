@@ -106,7 +106,7 @@ private:
 /// Constructor.
 /// For efficiency, it is advised to give appropriate hint sizes.
 inline Energy::Energy(int hintNbNodes, int hintNbArcs)
-: Graph(hintNbNodes, hintNbArcs), Econst(0)
+: Graph<short,short,int>(hintNbNodes, hintNbArcs), Econst(0)
 {}
 
 /// Destructor

@@ -58,6 +58,6 @@ float Match::GetK()
     if(sum==0) { std::cerr<<"GetK failed: K is 0!"<<std::endl; exit(1); }
 
     float K = ((float)sum)/num;
-    std::cout << "Computing statistics: data_penalty noise K=" << K <<std::endl;
+    std::cout << "Computing statistics: K(data_penalty noise) =" << K <<std::endl;
     return K;
 }
