@@ -119,16 +119,16 @@ inline Energy::Var Energy::add_variable(Value E0, Value E1) {
     return var;
 }
 
-/// Adds a constant to the energy function
+/// Add a constant to the energy function
 inline void Energy::add_constant(Value A) { Econst += A; }
 
-/// Adds a term E(x) of one binary variable to the energy function, where
+/// Add a term E(x) of one binary variable to the energy function, where
 /// E(0)=E0, E(1)=E1. E0 and E1 can be arbitrary.
 inline void Energy::add_term1(Var x, Value E0, Value E1) {
     add_tweights(x, E1, E0);
 }
 
-/// Adds a term E(x,y) of two binary variables to the energy function, where
+/// Add a term E(x,y) of two binary variables to the energy function, where
 /// E(0,0)=A, E(0,1)=B, E(1,0)=C, E(1,1)=D.
 /// The term must be regular, i.e. E00+E11 <= E01+E10
 inline void Energy::add_term2(Var x, Var y, Value A, Value B, Value C, Value D){
