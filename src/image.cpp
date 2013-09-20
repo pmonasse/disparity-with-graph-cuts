@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cassert>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include "image.h"

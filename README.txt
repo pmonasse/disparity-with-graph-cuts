@@ -19,23 +19,32 @@ Version 1.0-rc1 released on 2013/09/17
 
 Future releases and updates:
 
-Build and usage
----------------
+Build
+-----
 Prerequisites: CMake version 2.6 or later
 
-Build:
+- Unix, MacOS, Windows with MinGW:
 $ cd /path_to_KZ2/
 $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
 $ make
 
+CMake tries to find libPNG and libTIFF on your system, though neither is mandatory. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu.
+
+- Windows with Microsoft Visual Studio (MSVC):
+1. Launch CMake, input as source code location the KZ2 folder and use a new folder for binaries.
+2. Press 'Configure' then 'Generate' buttons. Choose your MSVC version. When done, you can quit CMake.
+3. In the binary folder, open the solution file KZ2.sln, this launches MSVC. Select 'Release' mode, then 'Build solution' (F7) will build your program.
+
 Test:
-$ bin/KZ2 ../images/scene_l.png ../images/scene_r.png -15 0 scene.tif -o scene.png
+$ bin/KZ2 ../images/scene_l.png ../images/scene_r.png -15 0 disp.tif -o disp.png
 Input images must be epipolar rectified, the disparity range depends on the pair. The output images are here:
-- scene.tif (float TIFF image, able to contain negative values and with occluded pixels as NaN, Not A Number) and
-- scene.png, representing the same image directly viewable, with gray levels for disparity and cyan color for occluded pixels.
+- disp.tif (float TIFF image, able to contain negative values and with occluded pixels as NaN, Not A Number) and
+- disp.png, representing the same image directly viewable, with gray levels for disparity and cyan color for occluded pixels.
 The latter is useful as many image viewers do not understand float TIFF.
 
-Usage: bin/KZ2 [options] im1.png im2.png dMin dMax [dispMap.tif]
+Usage
+-----
+bin/KZ2 [options] im1.png im2.png dMin dMax [dispMap.tif]
 General options:
  -i,--iter_max iter: max number of iterations
  -o,--output disp.png: scaled disparity map

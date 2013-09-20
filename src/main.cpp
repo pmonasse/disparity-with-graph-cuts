@@ -204,8 +204,8 @@ int main(int argc, char *argv[]) {
     }
     m.SetDispRange(disp_base, disp_max);
 
-    unsigned int seed = time(NULL);
-    srand(seed);
+    time_t seed = time(NULL);
+    srand((unsigned int)seed);
 
     fix_parameters(m, params, lambda);
     if(argc>5 || !sDisp.empty()) {
