@@ -55,6 +55,7 @@ public:
     void add_constant(Value E);
     void add_term1(Var x, Value E0, Value E1);
     void add_term2(Var x, Var y, Value E00, Value E01, Value E10, Value E11);
+    void forbid01(Var x, Var y);
 
     TotalValue minimize();
     int get_var(Var x) const;
@@ -97,6 +98,11 @@ inline void Energy::add_term2(Var x, Var y, Value A, Value B, Value C, Value D){
     add_tweights(x, D, B);
     add_tweights(y, 0, A-B);
     add_edge(x, y, 0, B+C-A-D);
+}
+
+/// Forbid (x,y)=(0,1) by putting infinite value to the arc from x to y.
+inline void Energy::forbid01(Var x, Var y) {
+    add_edge_infty(x, y);
 }
 
 /// After construction of the energy function, call this to minimize it.

@@ -68,6 +68,13 @@ void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
     arcs.push_back(aji);
 }
 
+/// Add edge with infinite capacity from node 'i' to 'j'
+template <typename captype, typename tcaptype, typename flowtype> 
+void Graph<captype,tcaptype,flowtype>::add_edge_infty(node_id i, node_id j)
+{
+    add_edge(i, j, std::numeric_limits<captype>::max(), 0);
+}
+
 /// Adds new edges 'SOURCE(s)->i' and 'i->SINK(t)' with corresponding weights.
 /// Can be called multiple times for each node.
 /// Weights can be negative.

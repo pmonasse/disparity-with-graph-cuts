@@ -83,6 +83,7 @@ src/data.cpp (*)
 src/statistics.cpp (*)
 src/main.cpp (*)
 src/energy/energy.h (*)
+src/energy/test_energy.cpp
 src/maxflow/graph.h (*)
 src/maxflow/graph.cpp (*)
 src/maxflow/maxflow.cpp (*)

@@ -208,6 +208,35 @@ int imSave(void *im, const char *filename)
 #endif
     }
 
+    if(ext && strcmp(ext,".png")==0) {
+#ifdef HAS_PNG
+        if(type==IMAGE_GRAY)
+            return io_png_write_u8 (filename, ((GrayImage)im)->data,
+                                    xsize, ysize, 1);
+        if(type==IMAGE_FLOAT)
+            return io_png_write_f32(filename, ((FloatImage)im)->data,
+                                    xsize, ysize, 1);
+        assert(type==IMAGE_RGB);
+        const size_t size = xsize*ysize;
+        unsigned char* data = new unsigned char[3*size];
+        unsigned char *r=data+0*size;
+        unsigned char *g=data+1*size;
+        unsigned char *b=data+2*size;        
+        for(size_t i=0; i<size; i++) {
+            *r++ = imRef((RGBImage)im,i,0).r;
+            *g++ = imRef((RGBImage)im,i,0).g;
+            *b++ = imRef((RGBImage)im,i,0).b;
+        }
+        int res = io_png_write_u8(filename, data, xsize, ysize, 3);
+        delete [] data;
+        return res;
+#else
+        std::cerr << "Unable to save file " << filename << " as PNG since the "
+                  << "program was built without PNG support. Trying PGM..."
+                  << std::endl;
+#endif
+    }
+
     FILE* fp = fopen(filename, "wb");
     if (!fp) return -1;
 

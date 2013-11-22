@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <vector>
 #include <queue>
+#include <limits>
 
 /// Graph class with maxflow algorithm.
 ///
@@ -56,6 +57,7 @@ public:
 
     node_id add_node();
     void add_edge(node_id i, node_id j, captype capij, captype capji);
+    void add_edge_infty(node_id i, node_id j);
     void add_tweights(node_id i, tcaptype capS, tcaptype capT);
 
     flowtype maxflow();

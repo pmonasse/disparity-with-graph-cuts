@@ -134,8 +134,6 @@ void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
     }
 }
 
-static const int INF = 10000; ///< Infinite capacity
-
 /// Build edges in graph enforcing uniqueness at pixel p.
 /// Prevent (p,p+d) and (p,p+a) from being both active.
 void Match::build_uniqueness_LR(Energy& e, Coord p) {
@@ -143,7 +141,7 @@ void Match::build_uniqueness_LR(Energy& e, Coord p) {
     Energy::Var varA = (Energy::Var) IMREF(varsA, p);
 
     if(IS_VAR(var0) && varA!=VAR_NONPRESENT)
-        e.add_term2(var0, varA, 0, INF, 0, 0);
+        e.forbid01(var0, varA);
 }
 
 /// Build edges in graph enforcing uniqueness at pixel p.
@@ -156,7 +154,7 @@ void Match::build_uniqueness_RL(Energy& e, Coord p, int a) {
         Coord pa = p-a;
         if (inRect(pa,imSizeL)) {
             Energy::Var varA = (Energy::Var) IMREF(varsA, pa);
-            e.add_term2(var0, varA, 0, INF, 0, 0);
+            e.forbid01(var0, varA);
         }
     }
 }
