@@ -1,4 +1,6 @@
 KZ2 - Kolmogorov and Zabih’s graph cuts stereo matching algorithm
+by Vladimir Kolmogorov <vnk@cs.cornell.edu>
+and Pascal Monasse <monasse@imagine.enpc.fr>
 
 This software is linked to the IPOL article [1], which gives a detailed description of the algorithm. The algorithm was first published in [2]. The source code is an extensively edited version of [3] by Pascal Monasse and is distributed under the terms of the LGPLv3 license. The max-flow algorithm was described in [4].
 
@@ -80,9 +82,7 @@ src/match.cpp (*)
 src/data.cpp (*)
 src/statistics.cpp (*)
 src/main.cpp (*)
-src/energy/README.TXT
 src/energy/energy.h (*)
-src/maxflow/README.TXT
 src/maxflow/graph.h (*)
 src/maxflow/graph.cpp (*)
 src/maxflow/maxflow.cpp (*)

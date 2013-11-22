@@ -16,31 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This software implements an energy minimization technique described in
-
-   What Energy Functions can be Minimized via Graph Cuts?
-   Vladimir Kolmogorov and Ramin Zabih. 
-   IEEE Trans. on PAMI, 26(2), 2004 and  Proc. of ECCV, 2002. 
-
-   It computes the global minimum of a function E of binary
-   variables x_1, ..., x_n which can be written as a sum of terms involving
-   at most three variables at a time:
-
-       E(x_1, ..., x_n) = \sum_{i}     E^{i}    (x_i)
-                        + \sum_{i,j}   E^{i,j}  (x_i, x_j)
-
-   The method works only if each term is "regular". Definitions of regularity
-   for terms E^{i}, E^{i,j} are given below as comments to functions
-   add_term1(), add_term2(). 
-
-   This software can be used only for research purposes.
-   IF YOU USE THIS SOFTWARE,
-   YOU SHOULD CITE THE AFOREMENTIONED PAPER IN ANY RESULTING PUBLICATION.
-
-   In order to use it, you will also need a MAXFLOW software which can be
-   obtained from http://www.cs.cornell.edu/People/vnk/software.html
-
-   Example usage:
+/*   Example usage:
 ///////////////////////////////////////////////////
 #include <iostream>
 #include "energy.h"
@@ -81,6 +57,24 @@ int main()
 #include <assert.h>
 #include "graph.h"
 
+/// This software implements an energy minimization technique described in
+///
+///   What Energy Functions can be Minimized via Graph Cuts?
+///   Vladimir Kolmogorov and Ramin Zabih. 
+///   IEEE Trans. on PAMI, 26(2), 2004 and  Proc. of ECCV, 2002. 
+///
+/// It computes the global minimum of a function E of binary
+/// variables x_1, ..., x_n which can be written as a sum of terms involving
+/// at most three variables at a time:
+///
+///       E(x_1, ..., x_n) = \sum_{i}     E^{i}    (x_i)
+///                        + \sum_{i,j}   E^{i,j}  (x_i, x_j)
+///
+/// The method works only if each term is "regular". Definitions of regularity
+/// for terms E^{i}, E^{i,j} are given below as comments to functions
+/// add_term1(), add_term2(). 
+///
+/// This is just a thin interface around a maxflow core.
 class Energy : Graph<short,short,int>
 {
 public:
