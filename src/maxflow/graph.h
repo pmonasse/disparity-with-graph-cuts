@@ -16,27 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
-  version 3.02
-
-  This software library implements the maxflow algorithm described in
-
-  "An Experimental Comparison of Min-Cut/Max-Flow Algorithms for
-   Energy Minimization in Vision."
-  Yuri Boykov and Vladimir Kolmogorov.
-  In IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI), 
-  September 2004
-
-  This algorithm was developed by Yuri Boykov and Vladimir Kolmogorov
-  at Siemens Corporate Research. To make it available for public use,
-  it was later reimplemented by Vladimir Kolmogorov based on open publications.
-
-  If you use this software for research purposes, you should cite
-  the aforementioned paper in any resulting publication.
-
-  For description, license, example usage see README.TXT.
-*/
-
 #ifndef GRAPH_H
 #define GRAPH_H
 
@@ -45,6 +24,23 @@
 #include <vector>
 #include <queue>
 
+/// Graph class with maxflow algorithm.
+///
+/// This software library implements the maxflow algorithm described in
+///
+/// "An Experimental Comparison of Min-Cut/Max-Flow Algorithms for
+///  Energy Minimization in Vision."
+/// Yuri Boykov and Vladimir Kolmogorov.
+/// In IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI), 
+/// September 2004
+///
+/// This algorithm was developed by Yuri Boykov and Vladimir Kolmogorov
+/// at Siemens Corporate Research. To make it available for public use,
+/// it was later reimplemented by V. Kolmogorov based on open publications.
+///
+/// If you use this software for research purposes, you should cite
+/// the aforementioned paper in any resulting publication.
+///
 /// captype: type of edge capacities (excluding t-links)
 /// tcaptype: type of t-links (edges between nodes and terminals)
 /// flowtype: type of total flow
@@ -60,7 +56,7 @@ public:
 
     node_id add_node();
     void add_edge(node_id i, node_id j, captype capij, captype capji);
-    void add_tweights(node_id i, tcaptype capSource, tcaptype capSink);
+    void add_tweights(node_id i, tcaptype capS, tcaptype capT);
 
     flowtype maxflow();
     termtype what_segment(node_id i, termtype defaultSegm=SOURCE) const;

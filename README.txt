@@ -1,18 +1,19 @@
 KZ2 - Kolmogorov and Zabih’s graph cuts stereo matching algorithm
 
-This software is linked to the IPOL article
-"Kolmogorov and Zabih’s Graph Cuts Stereo Matching Algorithm"
-by Vladimir Kolmogorov, Pascal Monasse, Pauline Tan
-    http://www.ipol.im/pub/pre/97/
-It implements the algorithm of the article:
-	Vladimir Kolmogorov and Ramin Zabih
-	"Computing Visual Correspondence with Occlusions using Graph Cuts"
-	In: International Conference on Computer Vision, July 2001.
+This software is linked to the IPOL article [1], which gives a detailed description of the algorithm. The algorithm was first published in [2]. The source code is an extensively edited version of [3] by Pascal Monasse and is distributed under the terms of the LGPLv3 license. The max-flow algorithm was described in [4].
 
-This program is written by Pascal Monasse <monasse@imagine.enpc.fr> and
-distributed under the terms of the LGPLv3 license.
-Based on original code "Match 3.4" by Vladimir Kolmogorov <vnk@cs.cornell.edu>
-http://pub.ist.ac.at/~vnk/software.html
+[1] "Kolmogorov and Zabih’s Graph Cuts Stereo Matching Algorithm"
+by Vladimir Kolmogorov, Pascal Monasse, Pauline Tan (2013)
+    IPOL, http://www.ipol.im/pub/pre/97/
+[2] "Computing Visual Correspondence with Occlusions using Graph Cuts"
+by Vladimir Kolmogorov and Ramin Zabih (2001)
+    International Conference on Computer Vision (IJCV)
+[3] "Match 3.4"
+software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
+    http://pub.ist.ac.at/~vnk/software.html
+[4] "An Experimental Comparison of Min-Cut/Max-Flow Algorithms for Energy Minimization in Vision."
+by Yuri Boykov and Vladimir Kolmogorov (2004)
+    IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
 Version 1.0-rc1 released on 2013/11/22
 

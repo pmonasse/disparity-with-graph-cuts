@@ -68,21 +68,21 @@ void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
     arcs.push_back(aji);
 }
 
-/// Adds new edge 'SOURCE->i' and 'i->SINK' with corresponding weights.
+/// Adds new edges 'SOURCE(s)->i' and 'i->SINK(t)' with corresponding weights.
 /// Can be called multiple times for each node.
 /// Weights can be negative.
 /// No internal memory is allocated by this call.
 template <typename captype, typename tcaptype, typename flowtype> 
 void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
-                                                    tcaptype capSource,
-                                                    tcaptype capSink)
+                                                    tcaptype capS,
+                                                    tcaptype capT)
 {
     assert(0<=i && i<(int)nodes.size());
     tcaptype delta = nodes[i].cap;
-    if (delta > 0) capSource += delta;
-    else           capSink   -= delta;
-    flow += (capSource < capSink) ? capSource : capSink;
-    nodes[i].cap = capSource - capSink;
+    if(delta > 0) capS += delta;
+    else          capT -= delta;
+    flow += (capS<capT)? capS: capT;
+    nodes[i].cap = capS - capT;
 }
 
 /// After the maxflow is computed, this function returns to which segment the
