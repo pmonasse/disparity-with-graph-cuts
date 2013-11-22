@@ -20,6 +20,7 @@ by Yuri Boykov and Vladimir Kolmogorov (2004)
 Version 1.0-rc1 released on 2013/11/22
 
 Future releases and updates:
+https://github.com/pmonasse/disparity-with-graph-cuts.git
 
 Build
 -----
