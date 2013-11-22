@@ -16,41 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*   Example usage:
-///////////////////////////////////////////////////
-#include <iostream>
-#include "energy.h"
-
-// Minimize the following function of 3 binary variables:
-// E(x, y, z) = x - 2*y + 3*(1-z) - 4*x*y + 5*|y-z|     
-int main()
-{
-    Energy::Var x, y, z;
-    Energy e;
-
-    x = e.add_variable();
-    y = e.add_variable();
-    z = e.add_variable();
-
-    e.add_term1(x, 0, 1);  // add term x 
-    e.add_term1(y, 0, -2); // add term -2*y
-    e.add_term1(z, 3, 0);  // add term 3*(1-z)
-
-    e.add_term2(x, y, 0, 0, 0, -4); // add term -4*x*y
-    e.add_term2(y, z, 0, 5, 5, 0); // add term 5*|y-z|
-
-    Energy::TotalValue Emin = e.minimize();
-
-    std::cout << "Minimum = " << Emin   << std::endl;
-    std::cout << "Optimal solution:"    << std::endl;
-    std::cout << "x = " << e.get_var(x) << std::endl;
-    std::cout << "y = " << e.get_var(y) << std::endl;
-    std::cout << "z = " << e.get_var(z) << std::endl;
-    return 0;
-}
-///////////////////////////////////////////////////
-*/
-
 #ifndef ENERGY_H
 #define ENERGY_H
 
@@ -75,6 +40,7 @@ int main()
 /// add_term1(), add_term2(). 
 ///
 /// This is just a thin interface around a maxflow core.
+/// See test_energy.cpp for example usage.
 class Energy : Graph<short,short,int>
 {
 public:
