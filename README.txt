@@ -9,13 +9,12 @@ It implements the algorithm of the article:
 	"Computing Visual Correspondence with Occlusions using Graph Cuts"
 	In: International Conference on Computer Vision, July 2001.
 
-
 This program is written by Pascal Monasse <monasse@imagine.enpc.fr> and
 distributed under the terms of the LGPLv3 license.
 Based on original code "Match 3.4" by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 http://pub.ist.ac.at/~vnk/software.html
 
-Version 1.0-rc1 released on 2013/09/17
+Version 1.0-rc1 released on 2013/11/22
 
 Future releases and updates:
 
@@ -28,19 +27,19 @@ $ cd /path_to_KZ2/
 $ mkdir Build && cd Build && cmake -DCMAKE_BUILD_TYPE:bool=Release ..
 $ make
 
-CMake tries to find libPNG and libTIFF on your system, though neither is mandatory. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu.
+CMake tries to find libPNG and libTIFF on your system, though neither is mandatory. They need to come with header files, which are provided by "...-dev" packages under Linux Debian or Ubuntu. If not found, they are compiled from scratch (source code in src/third_party).
 
 - Windows with Microsoft Visual Studio (MSVC):
 1. Launch CMake, input as source code location the KZ2 folder and use a new folder for binaries.
 2. Press 'Configure' then 'Generate' buttons. Choose your MSVC version. When done, you can quit CMake.
 3. In the binary folder, open the solution file KZ2.sln, this launches MSVC. Select 'Release' mode, then 'Build solution' (F7) will build your program.
 
-Test:
+- Test:
 $ bin/KZ2 ../images/scene_l.png ../images/scene_r.png -15 0 disp.tif -o disp.png
-Input images must be epipolar rectified, the disparity range depends on the pair. The output images are here:
+Input images must be epipolar rectified, the disparity range depends on the pair. The output images are in this test:
 - disp.tif (float TIFF image, able to contain negative values and with occluded pixels as NaN, Not A Number) and
 - disp.png, representing the same image directly viewable, with gray levels for disparity and cyan color for occluded pixels.
-The latter is useful as many image viewers do not understand float TIFF.
+The latter is useful as most image viewers do not understand float TIFF.
 
 Usage
 -----
@@ -86,10 +85,11 @@ src/maxflow/README.TXT
 src/maxflow/graph.h (*)
 src/maxflow/graph.cpp (*)
 src/maxflow/maxflow.cpp (*)
+src/third_party/... (sources of libPNG, libTIFF and their dependencies)
 
 LIMITATIONS
 -----------
 The software is a bit slower (10-20%) than the original code Match of V. Kolmogorov due to memory management of the graph. Match allocates sets of nodes and edges with malloc/realloc, and stores directly pointers to link nodes and edges. It has thus to adjust the pointers when realloc changes array address. This results in ugly code with offsets to pointers but:
 - Match has faster max-flow computation since it uses pointers to follow paths while KZ2 uses index in std::vector.
-- It was noticed that with the same allocation policy, using C's alloc/realloc is faster than standard allocator of std::vector using C++'s new. The reason is a mistery since elements have no constructor/destructor.
-To alleviate the latter defect, a preset amount of memory is pre-allocated for node and edge arrays: 2n edges and 11n edges, with n the number of pixels (see Match::ExpansionMove in kz2.cpp). These were determined experimentally to be adapted for a usual graph, but is less elegant and less efficient than on-demand allocation.
+- It was noticed that with the same allocation policy, using C's alloc/realloc is faster than standard allocator of std::vector using C++'s new. The reason is a mystery since elements have no constructor/destructor.
+To alleviate the latter defect, a preset amount of memory is pre-allocated for node and edge arrays: 2n edges and 11n edges, with n the number of pixels (see Match::ExpansionMove in kz2.cpp). These were determined experimentally to be adapted for a usual graph, but this is less elegant and less efficient than on-demand allocation.
