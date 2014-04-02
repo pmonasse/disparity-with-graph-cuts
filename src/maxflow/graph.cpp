@@ -4,7 +4,7 @@
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it

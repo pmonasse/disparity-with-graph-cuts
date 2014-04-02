@@ -4,7 +4,7 @@
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -41,26 +41,25 @@ where X describes the appropriate case (gray/color)
 /// Upper bound for intensity level difference when computing data cost
 static int CUTOFF=30;
 
+/// Distance from v to interval [min,max]
+inline int dist_interval(int v, int min, int max) {
+    if(v<min) return (min-v);
+    if(v>max) return (v-max);
+    return 0;
+}
+
 int Match::data_penalty_gray(Coord l, Coord r) const
 {
-    int dl, dr, d;
     int Il, Il_min, Il_max, Ir, Ir_min, Ir_max;
-
     Il     = IMREF(im_left,     l); Ir     = IMREF(im_right,     r);
     Il_min = IMREF(im_left_min, l); Ir_min = IMREF(im_right_min, r);
     Il_max = IMREF(im_left_max, l); Ir_max = IMREF(im_right_max, r);
 
-    if      (Il < Ir_min) dl = Ir_min - Il;
-    else if (Il > Ir_max) dl = Il - Ir_max;
-    else return 0;
-
-    if      (Ir < Il_min) dr = Il_min - Ir;
-    else if (Ir > Il_max) dr = Ir - Il_max;
-    else return 0;
-
-    d = std::min(dl, dr);
-    if (d>CUTOFF) d = CUTOFF;
-    if (params.data_cost==Parameters::L2) d = d*d;
+    int dl = dist_interval(Il, Ir_min, Ir_max);
+    int dr = dist_interval(Ir, Il_min, Il_max);
+    int d = std::min(dl, dr);
+    if(d>CUTOFF) d = CUTOFF;
+    if(params.dataCost==Parameters::L2) d = d*d;
 
     return d;
 }
@@ -78,17 +77,11 @@ int Match::data_penalty_color(Coord l, Coord r) const
     Il_max = IMREF(im_color_left_max,  l).r;
     Ir_max = IMREF(im_color_right_max, r).r;
 
-    if      (Il < Ir_min) dl = Ir_min - Il;
-    else if (Il > Ir_max) dl = Il - Ir_max;
-    else dl = 0;
-
-    if      (Ir < Il_min) dr = Il_min - Ir;
-    else if (Ir > Il_max) dr = Ir - Il_max;
-    else dr = 0;
-
+    dl = dist_interval(Il, Ir_min, Ir_max);
+    dr = dist_interval(Ir, Il_min, Il_max);
     d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
-    if (params.data_cost==Parameters::L2) d = d*d;
+    if (params.dataCost==Parameters::L2) d = d*d;
     d_sum += d;
 
     // green component
@@ -99,17 +92,11 @@ int Match::data_penalty_color(Coord l, Coord r) const
     Il_max = IMREF(im_color_left_max,  l).g;
     Ir_max = IMREF(im_color_right_max, r).g;
 
-    if      (Il < Ir_min) dl = Ir_min - Il;
-    else if (Il > Ir_max) dl = Il - Ir_max;
-    else dl = 0;
-
-    if      (Ir < Il_min) dr = Il_min - Ir;
-    else if (Ir > Il_max) dr = Ir - Il_max;
-    else dr = 0;
-
+    dl = dist_interval(Il, Ir_min, Ir_max);
+    dr = dist_interval(Ir, Il_min, Il_max);
     d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
-    if (params.data_cost==Parameters::L2) d = d*d;
+    if (params.dataCost==Parameters::L2) d = d*d;
     d_sum += d;
 
     // blue component
@@ -120,17 +107,11 @@ int Match::data_penalty_color(Coord l, Coord r) const
     Il_max = IMREF(im_color_left_max,  l).b;
     Ir_max = IMREF(im_color_right_max, r).b;
 
-    if      (Il < Ir_min) dl = Ir_min - Il;
-    else if (Il > Ir_max) dl = Il - Ir_max;
-    else dl = 0;
-
-    if      (Ir < Il_min) dr = Il_min - Ir;
-    else if (Ir > Il_max) dr = Ir - Il_max;
-    else dr = 0;
-
+    dl = dist_interval(Il, Ir_min, Ir_max);
+    dr = dist_interval(Ir, Il_min, Il_max);
     d = std::min(dl, dr);
     if (d>CUTOFF) d = CUTOFF;
-    if (params.data_cost==Parameters::L2) d = d*d;
+    if (params.dataCost==Parameters::L2) d = d*d;
     d_sum += d;
 
     return d_sum/3;
@@ -273,7 +254,7 @@ int Match::smoothness_penalty_gray(Coord p, Coord np, int disp) const
 
     if (dl<0) dl = -dl; if (dr<0) dr = -dr;
 
-    return (dl<params.I_threshold2 && dr<params.I_threshold2)?
+    return (dl<params.edgeThresh && dr<params.edgeThresh)?
         params.lambda1: params.lambda2;
 }
 
@@ -299,7 +280,7 @@ int Match::smoothness_penalty_color(Coord p, Coord np, int disp) const
     d = IMREF(im_color_right, p+disp).b - IMREF(im_color_right, np+disp).b;
     if (d<0) d = -d; if (d_max<d) d_max = d;
 
-    return (d_max<params.I_threshold2)? params.lambda1: params.lambda2;
+    return (d_max<params.edgeThresh)? params.lambda1: params.lambda2;
 }
 
 void Match::SetParameters(Parameters *_params)

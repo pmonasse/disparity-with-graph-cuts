@@ -4,7 +4,7 @@
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -20,8 +20,6 @@
 #include "nan.h"
 #include <limits>
 #include <iostream>
-#include <iomanip>
-#include <cassert>
 
 const int Match::OCCLUDED = std::numeric_limits<int>::max();
 
@@ -134,89 +132,4 @@ void Match::SetDispRange(int disp_min, int disp_max)
     end = rectEnd(imSizeR);
     for(RectIterator p=rectBegin(imSizeR); p!=end; ++p)
         IMREF(x_right,*p) = OCCLUDED;
-}
-
-/// Main algorithm
-void Match::KZ2()
-{
-    if (params.K<0 || params.I_threshold2<0 ||
-        params.lambda1<0 || params.lambda2<0 || params.denominator<1) {
-        std::cerr << "Error in KZ2: wrong parameter!" << std::endl;
-        exit(1);
-    }
-
-    if (params.denominator == 1)
-        std::cout << "KZ2:  K=" << params.K << std::endl
-                  << "      I_threshold2=" << params.I_threshold2
-                  << ", lambda1=" << params.lambda1
-                  << ", lambda2=" << params.lambda2
-                  << std::endl;
-    else
-        std::cout << "KZ2:  K=" << params.K<<'/'<<params.denominator <<std::endl
-                  << "      I_threshold2=" << params.I_threshold2
-                  << ", lambda1=" << params.lambda1<<'/'<<params.denominator
-                  << ", lambda2=" << params.lambda1<<'/'<<params.denominator
-                  << std::endl;
-    std::cout << "      data_cost = L" <<
-        ((params.data_cost==Parameters::L1)? '1': '2') << std::endl;
-
-    Run();
-}
-
-/// Generate a random permutation of the array elements
-void generate_permutation(int *buf, int n)
-{
-    for(int i=0; i<n; i++) buf[i] = i;
-    for(int i=0; i<n-1; i++) {
-        int j = i + (int) (((double)rand()/(RAND_MAX+1.0))*(n - i));
-        std::swap(buf[i],buf[j]);
-    }
-}
-
-/// Main algorithm: a series of alpha-expansions.
-void Match::Run()
-{
-    // Display 1 number after decimal separator for number of iterations
-    std::cout << std::fixed << std::setprecision(1);
-
-    const int dispSize = dispMax-dispMin+1;
-    int* permutation = new int[dispSize]; // random permutation
-    bool* done = new bool[dispSize]; // Can expansion of label decrease energy?
-    int nDone = dispSize; // number of 'false' entries in 'done'
-
-    E = ComputeEnergy();
-    std::cout << "E=" << E << std::endl;
-
-    std::fill_n(done, dispSize, false);
-    int step=0;
-    for(int iter=0; iter<params.iter_max && nDone>0; iter++) {
-        if (iter==0 || params.randomize_every_iteration)
-            generate_permutation(permutation, dispSize);
-
-        for(int index=0; index<dispSize; index++) {
-            int label = permutation[index];
-            if (done[label]) continue;
-
-            int oldE=E;
-            ExpansionMove(dispMin+label);
-            assert(ComputeEnergy()==E);
-
-            ++step;
-            std::cout << (oldE==E? '-': '*') << std::flush;
-
-            if(oldE == E)
-                --nDone;
-            else {
-                std::fill_n(done, dispSize, false);
-                nDone = dispSize-1;
-            }
-            done[label] = true;
-        }
-        std::cout << " E=" << E << std::endl;
-    }
-
-    std::cout << (float)step/dispSize << " iterations" << std::endl;
-
-    delete [] permutation;
-    delete [] done;
 }

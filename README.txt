@@ -5,7 +5,7 @@ and Pascal Monasse <monasse@imagine.enpc.fr>
 This software is linked to the IPOL article [1], which gives a detailed description of the algorithm. The algorithm was first published in [2]. The source code is an extensively edited version of [3] by Pascal Monasse and is distributed under the terms of the GPLv3 license. The max-flow algorithm was described in [4].
 
 [1] "Kolmogorov and Zabih’s Graph Cuts Stereo Matching Algorithm"
-by Vladimir Kolmogorov, Pascal Monasse, Pauline Tan (2013)
+by Vladimir Kolmogorov, Pascal Monasse, Pauline Tan (2014)
     IPOL, http://www.ipol.im/pub/pre/97/
 [2] "Computing Visual Correspondence with Occlusions using Graph Cuts"
 by Vladimir Kolmogorov and Ramin Zabih (2001)
@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0-rc1 released on 2013/11/22
+Version 1.0-rc2 released on 2014/04/02
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -49,7 +49,7 @@ Usage
 -----
 bin/KZ2 [options] im1.png im2.png dMin dMax [dispMap.tif]
 General options:
- -i,--iter_max iter: max number of iterations
+ -i,--max_iter iter: max number of iterations
  -o,--output disp.png: scaled disparity map
  -r,--random: random alpha order at each iteration
 Options for cost:
@@ -57,7 +57,7 @@ Options for cost:
  -l,--lambda lambda: value of lambda (smoothness)
  --lambda1 l1: smoothness cost not across edge
  --lambda2 l2: smoothness cost across edge
- -t,--threshold2 thres: intensity diff for 'edge'
+ -t,--threshold thres: intensity diff for 'edge'
  -k k: cost for occlusion
 If no output is given (neither dispMap.tif nor -o option), the program just displays the recommended computed values for K and lambda.
 
@@ -95,4 +95,4 @@ LIMITATIONS
 The software is a bit slower (10-20%) than the original code Match of V. Kolmogorov due to memory management of the graph. Match allocates sets of nodes and edges with malloc/realloc, and stores directly pointers to link nodes and edges. It has thus to adjust the pointers when realloc changes array address. This results in ugly code with offsets to pointers but:
 - Match has faster max-flow computation since it uses pointers to follow paths while KZ2 uses index in std::vector.
 - It was noticed that with the same allocation policy, using C's alloc/realloc is faster than standard allocator of std::vector using C++'s new. The reason is a mystery since elements have no constructor/destructor.
-To alleviate the latter defect, a preset amount of memory is pre-allocated for node and edge arrays: 2n edges and 11n edges, with n the number of pixels (see Match::ExpansionMove in kz2.cpp). These were determined experimentally to be adapted for a usual graph, but this is less elegant and less efficient than on-demand allocation.
+To alleviate the latter defect, a preset amount of memory is pre-allocated for node and edge arrays: 2n nodes and 12n edges, with n the number of pixels (see Match::ExpansionMove in kz2.cpp). These are the maximum possible values, but this pre-allocation is less elegant and less efficient than on-demand allocation.

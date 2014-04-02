@@ -3,7 +3,7 @@
  * @brief Main program for Kolmogorov-Zabih disparity estimation with graph cuts
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2012-2013, Pascal Monasse
+ * Copyright (c) 2012-2014, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -125,14 +125,14 @@ int main(int argc, char *argv[]) {
 
     CmdLine cmd;
     std::string cost, slambda, slambda1, slambda2, sK, sDisp;
-    cmd.add( make_option('i', params.iter_max, "iter_max") );
+    cmd.add( make_option('i', params.maxIter, "max_iter") );
     cmd.add( make_option('o', sDisp, "output") );
     cmd.add( make_switch('r', "random") );
     cmd.add( make_option('c', cost, "data_cost") );
     cmd.add( make_option('l', slambda, "lambda") );
     cmd.add( make_option(0, slambda1, "lambda1") );
     cmd.add( make_option(0, slambda2, "lambda2") );
-    cmd.add( make_option('t', params.I_threshold2, "threshold2") );
+    cmd.add( make_option('t', params.edgeThresh, "threshold") );
     cmd.add( make_option('k', sK) );
 
     cmd.process(argc, argv);
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Usage: " << argv[0] << " [options] "
                   << "im1.png im2.png dMin dMax [dispMap.tif]" << std::endl;
         std::cerr << "General options:" << '\n'
-                  << " -i,--iter_max iter: max number of iterations" <<'\n'
+                  << " -i,--max_iter iter: max number of iterations" <<'\n'
                   << " -o,--output disp.png: scaled disparity map" <<std::endl
                   << " -r,--random: random alpha order at each iteration" <<'\n'
                   << "Options for cost:" <<'\n'
@@ -148,17 +148,17 @@ int main(int argc, char *argv[]) {
                   << " -l,--lambda lambda: value of lambda (smoothness)" <<'\n'
                   << " --lambda1 l1: smoothness cost not across edge" <<'\n'
                   << " --lambda2 l2: smoothness cost across edge" <<'\n'
-                  << " -t,--threshold2 thres: intensity diff for 'edge'" <<'\n'
+                  << " -t,--threshold thres: intensity diff for 'edge'" <<'\n'
                   << " -k k: cost for occlusion" <<std::endl;
         return 1;
     }
 
-    if( cmd.used('r') ) params.randomize_every_iteration=true;
+    if( cmd.used('r') ) params.bRandomizeEveryIteration=true;
     if( cmd.used('c') ) {
         if(cost == "L1")
-            params.data_cost = Match::Parameters::L1;
+            params.dataCost = Match::Parameters::L1;
         else if(cost == "L2")
-            params.data_cost = Match::Parameters::L2;
+            params.dataCost = Match::Parameters::L2;
         else {
             std::cerr << "The cost parameter must be 'L1' or 'L2'" << std::endl;
             return 1;

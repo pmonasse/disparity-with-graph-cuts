@@ -4,7 +4,7 @@
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -18,6 +18,9 @@
 
 #include "match.h"
 #include "energy.h"
+#include <iostream>
+#include <iomanip>
+#include <cassert>
 
 /// (half of) the neighborhood system.
 /// The full neighborhood system is edges in NEIGHBORS plus reversed edges.
@@ -76,8 +79,8 @@ inline bool IS_VAR(Energy::Var var) { return (var>=0); }
 
 /// Build nodes in graph representing data+occlusion penalty for pixel p.
 ///
-/// For assignments in A^0:       SOURCE means 1, SINK means 0.
-/// For assigments in A^{\alpha}: SOURCE means 0, SINK means 1.
+/// For assignments in A^0:       SOURCE means active, SINK means inactive.
+/// For assigments in A^{\alpha}: SOURCE means inactive, SINK means active.
 void Match::build_nodes(Energy& e, Coord p, int a) {
     int d = IMREF(x_left, p);
     Coord pd = p+d;
@@ -175,11 +178,13 @@ void Match::update_disparity(const Energy& e, int a) {
     }
 }
 
-/// Compute the minimum a-expansion configuration
-void Match::ExpansionMove(int a)
+/// Compute the minimum a-expansion configuration.
+///
+/// Return whether the move is different from identity.
+bool Match::ExpansionMove(int a)
 { 
     // Factors 2 and 11 determined experimentally
-    Energy e(2*imSizeL.x*imSizeL.y, 11*imSizeL.x*imSizeL.y);
+    Energy e(2*imSizeL.x*imSizeL.y, 12*imSizeL.x*imSizeL.y);
 
     // Build graph
     RectIterator endL=rectEnd(imSizeL), endR=rectEnd(imSizeR);
@@ -201,6 +206,94 @@ void Match::ExpansionMove(int a)
     int oldE=E;
     E = e.minimize(); // Max-flow, give the lowest-energy expansion move
 
-    if(E<oldE) // lower energy, accept the expansion move
+    if(E<oldE) { // lower energy, accept the expansion move
         update_disparity(e, a);
+        assert(ComputeEnergy()==E);
+        return true;
+    }
+    return false;
+}
+
+/// Generate a random permutation of the array elements
+static void generate_permutation(int *buf, int n)
+{
+    for(int i=0; i<n; i++) buf[i] = i;
+    for(int i=0; i<n-1; i++) {
+        int j = i + (int) (((double)rand()/RAND_MAX)*(n - i));
+        if(j >= n) // Very unlikely, but still possible
+            continue;
+        std::swap(buf[i],buf[j]);
+    }
+}
+
+/// Main algorithm: a series of alpha-expansions.
+void Match::run()
+{
+    // Display 1 number after decimal separator for number of iterations
+    std::cout << std::fixed << std::setprecision(1);
+
+    const int dispSize = dispMax-dispMin+1;
+    int* permutation = new int[dispSize]; // random permutation
+
+    E = ComputeEnergy();
+    std::cout << "E=" << E << std::endl;
+
+    bool* done = new bool[dispSize]; // Can expansion of label decrease energy?
+    std::fill_n(done, dispSize, false);
+    int nDone = dispSize; // number of 'false' entries in 'done'
+
+    int step=0;
+    for(int iter=0; iter<params.maxIter && nDone>0; iter++) {
+        if (iter==0 || params.bRandomizeEveryIteration)
+            generate_permutation(permutation, dispSize);
+
+        for(int index=0; index<dispSize; index++) {
+            int label = permutation[index];
+            if (done[label]) continue;
+            ++step;
+
+            if( ExpansionMove(dispMin+label) ) {
+                std::fill_n(done, dispSize, false);
+                nDone = dispSize;
+                std::cout << '*';
+            } else
+                std::cout << '-';
+            std::cout << std::flush;
+            done[label] = true;
+            --nDone;
+        }
+        std::cout << " E=" << E << std::endl;
+    }
+
+    std::cout << (float)step/dispSize << " iterations" << std::endl;
+
+    delete [] permutation;
+    delete [] done;
+}
+
+/// Main algorithm
+void Match::KZ2()
+{
+    if (params.K<0 || params.edgeThresh<0 ||
+        params.lambda1<0 || params.lambda2<0 || params.denominator<1) {
+        std::cerr << "Error in KZ2: wrong parameter!" << std::endl;
+        exit(1);
+    }
+
+    if (params.denominator == 1)
+        std::cout << "KZ2:  K=" << params.K << std::endl
+                  << "      edgeTreshold=" << params.edgeThresh
+                  << ", lambda1=" << params.lambda1
+                  << ", lambda2=" << params.lambda2
+                  << std::endl;
+    else
+        std::cout << "KZ2:  K=" << params.K<<'/'<<params.denominator <<std::endl
+                  << "      edgeThreshold=" << params.edgeThresh
+                  << ", lambda1=" << params.lambda1<<'/'<<params.denominator
+                  << ", lambda2=" << params.lambda1<<'/'<<params.denominator
+                  << std::endl;
+    std::cout << "      data_cost = L" <<
+        ((params.dataCost==Parameters::L1)? '1': '2') << std::endl;
+
+    run();
 }

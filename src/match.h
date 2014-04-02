@@ -4,7 +4,7 @@
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
  * 
- * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
+ * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
  * 
  * This program is free software: you can redistribute it and/or modify it
@@ -34,19 +34,19 @@ public:
     /// Parameters of algorithm.
     struct Parameters
     {
-        enum { L1, L2 } data_cost; ///< Data term
+        enum { L1, L2 } dataCost; ///< Data term
         /// Data term must be multiplied by denominator.
         /// Equivalent to using lambda1/denom, lambda2/denom, K/denom
         int denominator;
 
         // Smoothness term
-        int I_threshold2; ///< Intensity level diff for 'edge'
+        int edgeThresh; ///< Intensity level diff for 'edge'
         int lambda1; ///< Smoothness cost not across edge
         int lambda2; ///< Smoothness cost across edge (should be <=lambda1)
         int K; ///< Penalty for inactive assignment
 
-        int iter_max; ///< Maximum number of iterations
-        bool randomize_every_iteration; ///< Random alpha order at each iter
+        int maxIter; ///< Maximum number of iterations
+        bool bRandomizeEveryIteration; ///< Random alpha order at each iter
 
     };
     float GetK();
@@ -77,22 +77,22 @@ private:
     IntImage vars0; ///< Variables before alpha expansion
     IntImage varsA; ///< Variables after alpha expansion
 
-    void Run();
+    void run();
     void InitSubPixel();
 
     // Data penalty functions
-    int data_penalty_gray (Coord l, Coord r) const;
-    int data_penalty_color(Coord l, Coord r) const;
+    int  data_penalty_gray (Coord l, Coord r) const;
+    int  data_penalty_color(Coord l, Coord r) const;
 
     // Smoothness penalty functions
-    int   smoothness_penalty_gray (Coord p, Coord np, int d) const;
-    int   smoothness_penalty_color(Coord p, Coord np, int d) const;
+    int  smoothness_penalty_gray (Coord p, Coord np, int d) const;
+    int  smoothness_penalty_color(Coord p, Coord np, int d) const;
 
     // Kolmogorov-Zabih algorithm
-    int   data_occlusion_penalty(Coord l, Coord r) const;
-    int   smoothness_penalty(Coord p, Coord np, int d) const;
-    int   ComputeEnergy() const;
-    void  ExpansionMove(int a);
+    int  data_occlusion_penalty(Coord l, Coord r) const;
+    int  smoothness_penalty(Coord p, Coord np, int d) const;
+    int  ComputeEnergy() const;
+    bool ExpansionMove(int a);
 
     // Graph construction
     void build_nodes        (Energy& e, Coord p, int a);
