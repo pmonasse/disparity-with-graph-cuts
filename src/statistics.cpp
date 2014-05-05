@@ -41,7 +41,7 @@ float Match::GetK()
     for(p.x=xmin; p.x<xmax; p.x++) {
         // compute k'th smallest value among data_penalty(p, p+d) for all d
         for(int i=0, d=dispMin; d<=dispMax; d++) {
-            int delta = (im_left?
+            int delta = (imLeft?
                          data_penalty_gray (p,p+d):
                          data_penalty_color(p,p+d));
             if(i<k) array[i++] = delta;

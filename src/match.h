@@ -23,13 +23,12 @@
 class Energy;
 
 /// Main class for Kolmogorov-Zabih algorithm
-class Match
-{
+class Match {
 public:
     Match(GeneralImage left, GeneralImage right, bool color=false);
     ~Match();
 
-    void SetDispRange(int disp_base, int disp_max);
+    void SetDispRange(int dMin, int dMax);
 
     /// Parameters of algorithm.
     struct Parameters
@@ -53,25 +52,25 @@ public:
     void SetParameters(Parameters *params);
     void KZ2();
 
-    void SaveXLeft(const char *file_name); ///< Save disp. map as float TIFF
-    void SaveScaledXLeft(const char *file_name, bool flag); ///< Save as PPM
+    void SaveXLeft(const char *fileName); ///< Save disp. map as float TIFF
+    void SaveScaledXLeft(const char *fileName, bool flag); ///< Save colormapped
 
 private:
-    Coord imSizeL, imSizeR; ///< Image dimensions
-    GrayImage im_left, im_right; ///< Original images (if gray)
-    RGBImage im_color_left, im_color_right; ///< Original images (if color)
-    GrayImage im_left_min, im_left_max;   ///< Range of gray based on neighbors
-    GrayImage im_right_min, im_right_max; ///< Range of gray based on neighbors
-    RGBImage im_color_left_min, im_color_left_max; ///< For color images
-    RGBImage im_color_right_min, im_color_right_max;
+    Coord imSizeL, imSizeR; ///< image dimensions
+    GrayImage imLeft, imRight;          ///< original images (if gray)
+    RGBImage imColorLeft, imColorRight; ///< original images (if color)
+    GrayImage imLeftMin, imLeftMax;     ///< range of gray based on neighbors
+    GrayImage imRightMin, imRightMax;   ///< range of gray based on neighbors
+    RGBImage imColorLeftMin, imColorLeftMax; ///< For color images
+    RGBImage imColorRightMin, imColorRightMax;
     int dispMin, dispMax; ///< range of disparities
 
     static const int OCCLUDED; ///< Special value of disparity meaning occlusion
-    /// if l - pixel in the left image, r - pixel in the right image, then
-    /// r == l + Coord(IMREF(x_left,  l), l.y)
-    /// l == r + Coord(IMREF(x_right, r), r.y)
-    IntImage  x_left, x_right;
-    Parameters  params;
+    /// If (p,q) is an active assignment
+    /// q == p + Coord(IMREF(d_left,  p), p.y)
+    /// p == q + Coord(IMREF(d_right, q), q.y)
+    IntImage  d_left, d_right;
+    Parameters  params; ///< Set of parameters
 
     int E; ///< Current energy
     IntImage vars0; ///< Variables before alpha expansion

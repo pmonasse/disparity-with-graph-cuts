@@ -28,41 +28,38 @@ const struct Coord NEIGHBORS[] = { Coord(-1,0), Coord(0,1) };
 #define NEIGHBOR_NUM (sizeof(NEIGHBORS) / sizeof(Coord))
 
 /// Compute the data+occlusion penalty (D(a)-K)
-int Match::data_occlusion_penalty(Coord l, Coord r) const
-{
-    int D = (im_left? data_penalty_gray(l,r): data_penalty_color(l,r));
+int Match::data_occlusion_penalty(Coord p, Coord q) const {
+    int D = (imLeft? data_penalty_gray(p,q): data_penalty_color(p,q));
     return params.denominator*D - params.K;
 }
 
-/// Compute the smoothness penalty of assignments (p,p+d) and (np,np+d)
-int Match::smoothness_penalty(Coord p, Coord np, int d) const
-{
-    return (im_left?
-            smoothness_penalty_gray (p,np,d):
-            smoothness_penalty_color(p,np,d));
+/// Compute the smoothness penalty of assignments (p1,p1+d) and (p2,p2+d)
+int Match::smoothness_penalty(Coord p1, Coord p2, int d) const {
+    return (imLeft?
+            smoothness_penalty_gray (p1,p2,d):
+            smoothness_penalty_color(p1,p2,d));
 }
 
 /// Compute current energy.
 /// We use this function only for sanity check.
-int Match::ComputeEnergy() const
-{
+int Match::ComputeEnergy() const {
     int E = 0;
 
     RectIterator end=rectEnd(imSizeL);
-    for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
-        int d = IMREF(x_left,*p);
-        if (d != OCCLUDED)
-            E += data_occlusion_penalty(*p, *p+d);
+    for(RectIterator p1=rectBegin(imSizeL); p1!=end; ++p1) {
+        int d1 = IMREF(d_left,*p1);
+        if(d1!=OCCLUDED)
+            E += data_occlusion_penalty(*p1, *p1+d1);
 
-        for (unsigned int k=0; k<NEIGHBOR_NUM; k++) {
-            Coord np = *p + NEIGHBORS[k];
-            if (inRect(np,imSizeL)) {
-                int nd = IMREF(x_left, np);
-                if(d == nd) continue; // smoothness satisfied
-                if( d!=OCCLUDED && inRect(np+d,imSizeR))
-                    E += smoothness_penalty(*p, np, d);
-                if(nd!=OCCLUDED && inRect(*p+nd,imSizeR))
-                    E += smoothness_penalty(*p, np, nd);
+        for(unsigned int k=0; k<NEIGHBOR_NUM; k++) {
+            Coord p2 = *p1 + NEIGHBORS[k];
+            if(inRect(p2,imSizeL)) {
+                int d2 = IMREF(d_left, p2);
+                if(d1==d2) continue; // smoothness satisfied
+                if(d1!=OCCLUDED && inRect( p2+d1,imSizeR))
+                    E += smoothness_penalty(*p1, p2, d1);
+                if(d2!=OCCLUDED && inRect(*p1+d2,imSizeR))
+                    E += smoothness_penalty(*p1, p2, d2);
             }
         }
     }
@@ -70,10 +67,10 @@ int Match::ComputeEnergy() const
     return E;
 }
 
-/// VAR_ACTIVE means disparity alpha before expansion move (in vars0 and varsA)
-static const Energy::Var VAR_ACTIVE     = ((Energy::Var)-1);
-/// VAR_NONPRESENT means occlusion in vars0, and p+alpha outside image in varsA
-static const Energy::Var VAR_NONPRESENT = ((Energy::Var)-2);
+/// VAR_ALPHA means disparity alpha before expansion move (in vars0 and varsA)
+static const Energy::Var VAR_ALPHA     = ((Energy::Var)-1);
+/// VAR_ABSENT means occlusion in vars0, and p+alpha outside image in varsA
+static const Energy::Var VAR_ABSENT = ((Energy::Var)-2);
 /// Indicate if the variable has a regular value
 inline bool IS_VAR(Energy::Var var) { return (var>=0); }
 
@@ -82,108 +79,107 @@ inline bool IS_VAR(Energy::Var var) { return (var>=0); }
 /// For assignments in A^0:       SOURCE means active, SINK means inactive.
 /// For assigments in A^{\alpha}: SOURCE means inactive, SINK means active.
 void Match::build_nodes(Energy& e, Coord p, int a) {
-    int d = IMREF(x_left, p);
-    Coord pd = p+d;
+    int d = IMREF(d_left, p);
+    Coord q = p+d;
     if(a==d) { // active assignment (p,p+a) in A^a will remain active
-        IMREF(vars0, p) = VAR_ACTIVE;
-        IMREF(varsA, p) = VAR_ACTIVE;
-        e.add_constant(data_occlusion_penalty(p, pd));
+        IMREF(vars0, p) = VAR_ALPHA;
+        IMREF(varsA, p) = VAR_ALPHA;
+        e.add_constant(data_occlusion_penalty(p,q));
         return;
     }
 
     IMREF(vars0, p) = (d!=OCCLUDED)? // assignment (p,p+d) in A^0
-        e.add_variable(data_occlusion_penalty(p, pd), 0): VAR_NONPRESENT;
+        e.add_variable(data_occlusion_penalty(p,q), 0): VAR_ABSENT;
 
-    Coord pa = p+a;
-    IMREF(varsA, p) = inRect(pa,imSizeR)? // assignment (p,p+a) in A^a
-        e.add_variable(0, data_occlusion_penalty(p, pa)): VAR_NONPRESENT;
+    q = p+a;
+    IMREF(varsA, p) = inRect(q,imSizeR)? // assignment (p,p+a) in A^a
+        e.add_variable(0, data_occlusion_penalty(p,q)): VAR_ABSENT;
 }
 
-/// Build smoothness term for pixels p and neighbor np with disparity a.
-void Match::build_smoothness(Energy& e, Coord p, Coord np, int a) {
-    int d = IMREF(x_left, p);
-    Energy::Var var0 = (Energy::Var) IMREF(vars0, p);
-    Energy::Var varA = (Energy::Var) IMREF(varsA, p);
+/// Build smoothness term for neighbor pixels p1 and p2 with disparity a.
+void Match::build_smoothness(Energy& e, Coord p1, Coord p2, int a) {
+    int d1 = IMREF(d_left, p1);
+    Energy::Var o1 = (Energy::Var) IMREF(vars0, p1);
+    Energy::Var a1 = (Energy::Var) IMREF(varsA, p1);
 
-    int nd = IMREF(x_left, np);
-    Energy::Var nvar0 = (Energy::Var) IMREF(vars0, np);
-    Energy::Var nvarA = (Energy::Var) IMREF(varsA, np);
+    int d2 = IMREF(d_left, p2);
+    Energy::Var o2 = (Energy::Var) IMREF(vars0, p2);
+    Energy::Var a2 = (Energy::Var) IMREF(varsA, p2);
 
     // disparity a
-    if(varA!=VAR_NONPRESENT && nvarA!=VAR_NONPRESENT) {
-        int delta = smoothness_penalty(p, np, a);
-        if(varA != VAR_ACTIVE) { // (p,p+a) is variable
-            if(nvarA != VAR_ACTIVE) // Penalize different activity
-                e.add_term2(varA, nvarA, 0, delta, delta, 0);
-            else // Penalize (p,p+a) inactive
-                e.add_term1(varA, delta, 0);
-        } else if(nvarA != VAR_ACTIVE) // (p,p+a) active, (np,np+a) variable
-            e.add_term1(nvarA, delta, 0); // Penalize (np,np+a) inactive
+    if(a1!=VAR_ABSENT && a2!=VAR_ABSENT) {
+        int delta = smoothness_penalty(p1, p2, a);
+        if(a1 != VAR_ALPHA) { // (p1,p1+a) is variable
+            if(a2 != VAR_ALPHA) // Penalize different activity
+                e.add_term2(a1, a2, 0, delta, delta, 0);
+            else // Penalize (p1,p1+a) inactive
+                e.add_term1(a1, delta, 0);
+        } else if(a2 != VAR_ALPHA) // (p1,p1+a) active, (p2,p2+a) variable
+            e.add_term1(a2, delta, 0); // Penalize (p2,p2+a) inactive
     }
 
-    // disparity d (if not a)
-    if(IS_VAR(var0) && inRect(np+d,imSizeR)) {
-        int delta = smoothness_penalty(p, np, d);
-        if(d == nd) // Penalize different activity
-            e.add_term2(var0, nvar0, 0, delta, delta, 0);
-        else // (np,np+d) inactive, so penalize (p,p+d) active
-            e.add_term1(var0, delta, 0);
+    // disparity d1 (if not a)
+    if(IS_VAR(o1) && inRect(p2+d1,imSizeR)) {
+        int delta = smoothness_penalty(p1, p2, d1);
+        if(d1 == d2) // Penalize different activity
+            e.add_term2(o1, o2, 0, delta, delta, 0);
+        else // (p2,p2+d1) inactive, so penalize (p1,p1+d1) active
+            e.add_term1(o1, delta, 0);
     }
 
-    // disparity nd (not a or d): (p,p+nd) inactive, penalize (np,p+nd) active
-    if(IS_VAR(nvar0) && d!=nd && inRect(p+nd,imSizeR)) {
-        int delta = smoothness_penalty(p, np, nd);
-        e.add_term1(nvar0, delta, 0);
+    // disparity d2 (not a, d1): (p1,p1+d2) inactive, penalize (p2,p2+d2) active
+    if(IS_VAR(o2) && d1!=d2 && inRect(p1+d2,imSizeR)) {
+        int delta = smoothness_penalty(p1, p2, d2);
+        e.add_term1(o2, delta, 0);
     }
 }
 
 /// Build edges in graph enforcing uniqueness at pixel p.
 /// Prevent (p,p+d) and (p,p+a) from being both active.
 void Match::build_uniqueness_LR(Energy& e, Coord p) {
-    Energy::Var var0 = (Energy::Var) IMREF(vars0, p);
-    Energy::Var varA = (Energy::Var) IMREF(varsA, p);
+    Energy::Var o = (Energy::Var) IMREF(vars0, p);
+    Energy::Var a = (Energy::Var) IMREF(varsA, p);
 
-    if(IS_VAR(var0) && varA!=VAR_NONPRESENT)
-        e.forbid01(var0, varA);
+    if(IS_VAR(o) && a!=VAR_ABSENT)
+        e.forbid01(o,a);
 }
 
-/// Build edges in graph enforcing uniqueness at pixel p.
-/// Prevent (p-d,p) and (p-a,p) from being both active.
-void Match::build_uniqueness_RL(Energy& e, Coord p, int a) {
-    int d = IMREF(x_right, p);
+/// Build edges in graph enforcing uniqueness at pixel q.
+/// Prevent (q-d,q) and (q-alpha,q) from being both active.
+void Match::build_uniqueness_RL(Energy& e, Coord q, int alpha) {
+    int d = IMREF(d_right, q);
     if(d==OCCLUDED) return;
-    Energy::Var var0 = (Energy::Var) IMREF(vars0, p+d);
-    if(var0!=VAR_ACTIVE) {
-        Coord pa = p-a;
-        if (inRect(pa,imSizeL)) {
-            Energy::Var varA = (Energy::Var) IMREF(varsA, pa);
-            e.forbid01(var0, varA);
+    Energy::Var o = (Energy::Var) IMREF(vars0, q+d);
+    if(o!=VAR_ALPHA) {
+        Coord p = q-alpha;
+        if(inRect(p,imSizeL)) {
+            Energy::Var a = (Energy::Var) IMREF(varsA, p);
+            e.forbid01(o, a);
         }
     }
 }
 
 /// Update the disparity map according to min cut of energy.
-/// We need to set x_right for smoothness term in next expansion move.
-void Match::update_disparity(const Energy& e, int a) {
+/// We need to set d_right for smoothness term in next expansion move.
+void Match::update_disparity(const Energy& e, int alpha) {
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
-        Energy::Var var0 = (Energy::Var) IMREF(vars0,*p);
-        if(IS_VAR(var0) && e.get_var(var0)==1)
-            IMREF(x_left,*p) = IMREF(x_right,*p+IMREF(x_left,*p)) = OCCLUDED;
+        Energy::Var o = (Energy::Var) IMREF(vars0,*p);
+        if(IS_VAR(o) && e.get_var(o)==1)
+            IMREF(d_left,*p) = IMREF(d_right,*p+IMREF(d_left,*p)) = OCCLUDED;
     }
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
-        Energy::Var varA = (Energy::Var) IMREF(varsA,*p);
-        if(IS_VAR(varA) && e.get_var(varA)==1) // New disparity
-            IMREF(x_right,*p+a) = -(IMREF(x_left,*p) = a);
+        Energy::Var a = (Energy::Var) IMREF(varsA,*p);
+        if(IS_VAR(a) && e.get_var(a)==1) // New disparity
+            IMREF(d_right,*p+alpha) = -(IMREF(d_left,*p) = alpha);
     }
 }
 
 /// Compute the minimum a-expansion configuration.
 ///
 /// Return whether the move is different from identity.
-bool Match::ExpansionMove(int a)
-{ 
-    // Factors 2 and 11 determined experimentally
+bool Match::ExpansionMove(int a) {
+    // Factors 2 and 12 are minimual ensuring no rellocation
     Energy e(2*imSizeL.x*imSizeL.y, 12*imSizeL.x*imSizeL.y);
 
     // Build graph
@@ -191,17 +187,17 @@ bool Match::ExpansionMove(int a)
     for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
         build_nodes(e, *p, a);
 
-    for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
+    for(RectIterator p1=rectBegin(imSizeL); p1!=endL; ++p1)
         for(unsigned int k=0; k<NEIGHBOR_NUM; k++) {
-            Coord np = *p+NEIGHBORS[k];
-            if(inRect(np,imSizeL))
-                build_smoothness(e, *p, np, a);
+            Coord p2 = *p1+NEIGHBORS[k];
+            if(inRect(p2,imSizeL))
+                build_smoothness(e, *p1, p2, a);
         }
 
     for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
         build_uniqueness_LR(e, *p);
-    for(RectIterator p=rectBegin(imSizeR); p!=endR; ++p)
-        build_uniqueness_RL(e, *p, a);
+    for(RectIterator q=rectBegin(imSizeR); q!=endR; ++q)
+        build_uniqueness_RL(e, *q, a);
 
     int oldE=E;
     E = e.minimize(); // Max-flow, give the lowest-energy expansion move
@@ -215,8 +211,7 @@ bool Match::ExpansionMove(int a)
 }
 
 /// Generate a random permutation of the array elements
-static void generate_permutation(int *buf, int n)
-{
+static void generate_permutation(int *buf, int n) {
     for(int i=0; i<n; i++) buf[i] = i;
     for(int i=0; i<n-1; i++) {
         int j = i + (int) (((double)rand()/RAND_MAX)*(n - i));
@@ -227,8 +222,7 @@ static void generate_permutation(int *buf, int n)
 }
 
 /// Main algorithm: a series of alpha-expansions.
-void Match::run()
-{
+void Match::run() {
     // Display 1 number after decimal separator for number of iterations
     std::cout << std::fixed << std::setprecision(1);
 
@@ -244,12 +238,12 @@ void Match::run()
 
     int step=0;
     for(int iter=0; iter<params.maxIter && nDone>0; iter++) {
-        if (iter==0 || params.bRandomizeEveryIteration)
+        if(iter==0 || params.bRandomizeEveryIteration)
             generate_permutation(permutation, dispSize);
 
         for(int index=0; index<dispSize; index++) {
             int label = permutation[index];
-            if (done[label]) continue;
+            if(done[label]) continue;
             ++step;
 
             if( ExpansionMove(dispMin+label) ) {
@@ -272,27 +266,24 @@ void Match::run()
 }
 
 /// Main algorithm
-void Match::KZ2()
-{
-    if (params.K<0 || params.edgeThresh<0 ||
+void Match::KZ2() {
+    if(params.K<0 || params.edgeThresh<0 ||
         params.lambda1<0 || params.lambda2<0 || params.denominator<1) {
         std::cerr << "Error in KZ2: wrong parameter!" << std::endl;
         exit(1);
     }
 
-    if (params.denominator == 1)
+    if(params.denominator == 1)
         std::cout << "KZ2:  K=" << params.K << std::endl
                   << "      edgeTreshold=" << params.edgeThresh
                   << ", lambda1=" << params.lambda1
-                  << ", lambda2=" << params.lambda2
-                  << std::endl;
+                  << ", lambda2=" << params.lambda2;
     else
         std::cout << "KZ2:  K=" << params.K<<'/'<<params.denominator <<std::endl
                   << "      edgeThreshold=" << params.edgeThresh
                   << ", lambda1=" << params.lambda1<<'/'<<params.denominator
-                  << ", lambda2=" << params.lambda1<<'/'<<params.denominator
-                  << std::endl;
-    std::cout << "      data_cost = L" <<
+                  << ", lambda2=" << params.lambda1<<'/'<<params.denominator;
+    std::cout << ", dataCost = L" <<
         ((params.dataCost==Parameters::L1)? '1': '2') << std::endl;
 
     run();

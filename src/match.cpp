@@ -30,79 +30,79 @@ Match::Match(GeneralImage left, GeneralImage right, bool color)
     imSizeR = Coord(imGetXSize(right),imGetYSize(right));
 
     if (!color) {
-        im_color_left = im_color_right = 0;
-        im_color_left_min = im_color_right_min = 0;
-        im_color_left_max = im_color_right_max = 0;
+        imColorLeft = imColorRight = 0;
+        imColorLeftMin = imColorRightMin = 0;
+        imColorLeftMax = imColorRightMax = 0;
 
-        im_left  = (GrayImage)left; im_right = (GrayImage)right;
-        im_left_min = im_left_max = im_right_min = im_right_max = 0;
+        imLeft  = (GrayImage)left; imRight = (GrayImage)right;
+        imLeftMin = imLeftMax = imRightMin = imRightMax = 0;
     } else {
-        im_left = im_right = 0;
-        im_left_min = im_right_min = 0;
-        im_left_max = im_right_max = 0;
+        imLeft = imRight = 0;
+        imLeftMin = imRightMin = 0;
+        imLeftMax = imRightMax = 0;
 
-        im_color_left = (RGBImage)left;
-        im_color_right = (RGBImage)right;
+        imColorLeft = (RGBImage)left;
+        imColorRight = (RGBImage)right;
 
-        im_color_left_min = im_color_left_max = 0;
-        im_color_right_min = im_color_right_max = 0;
+        imColorLeftMin = imColorLeftMax = 0;
+        imColorRightMin = imColorRightMax = 0;
     }
 
     dispMin = dispMax = 0;
 
-    x_left  = (IntImage)imNew(IMAGE_INT, imSizeL);
-    x_right = (IntImage)imNew(IMAGE_INT, imSizeR);
+    d_left  = (IntImage)imNew(IMAGE_INT, imSizeL);
+    d_right = (IntImage)imNew(IMAGE_INT, imSizeR);
 
     vars0 = (IntImage)imNew(IMAGE_INT, imSizeL);
     varsA = (IntImage)imNew(IMAGE_INT, imSizeL);
-    if (!x_left || !x_right || !vars0 || !varsA)
+    if (!d_left || !d_right || !vars0 || !varsA)
         { std::cerr << "Not enough memory!" << std::endl; exit(1); }
 }
 
 /// Destructor
 Match::~Match()
 {
-    imFree(im_left_min);
-    imFree(im_left_max);
-    imFree(im_right_min);
-    imFree(im_right_max);
-    imFree(im_color_left_min);
-    imFree(im_color_left_max);
-    imFree(im_color_right_min);
-    imFree(im_color_right_max);
+    imFree(imLeftMin);
+    imFree(imLeftMax);
+    imFree(imRightMin);
+    imFree(imRightMax);
+    imFree(imColorLeftMin);
+    imFree(imColorLeftMax);
+    imFree(imColorRightMin);
+    imFree(imColorRightMax);
 
-    imFree(x_left);
-    imFree(x_right);
+    imFree(d_left);
+    imFree(d_right);
 
     imFree(vars0);
     imFree(varsA);
 }
 
 /// Save disparity map as float TIFF image
-void Match::SaveXLeft(const char *file_name)
+void Match::SaveXLeft(const char *fileName)
 {
     FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, imSizeL);
 
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
-        int d=IMREF(x_left,*p);
+        int d=IMREF(d_left,*p);
         IMREF(out,*p) = (d==OCCLUDED? NaN: static_cast<float>(d));
     }
 
-    imSave(out, file_name);
+    imSave(out, fileName);
     imFree(out);
 }
 
 /// Save scaled disparity map as 8-bit color image (gray between 64 and 255).
 /// flag: lowest disparity should appear darkest (true) or brightest (false).
-void Match::SaveScaledXLeft(const char *file_name, bool flag)
+void Match::SaveScaledXLeft(const char *fileName, bool flag)
 {
     RGBImage im = (RGBImage)imNew(IMAGE_RGB, imSizeL);
     const int dispSize = dispMax-dispMin+1;
 
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
-        int d = IMREF(x_left,*p), c;
+        int d = IMREF(d_left,*p), c;
         if (d==OCCLUDED) {
             IMREF(im,*p).r=0; IMREF(im,*p).g=IMREF(im,*p).b=255;
         } else {
@@ -113,23 +113,23 @@ void Match::SaveScaledXLeft(const char *file_name, bool flag)
         }
     }
 
-    imSave(im, file_name);
+    imSave(im, fileName);
     imFree(im);
 }
 
 /// Specify disparity range
-void Match::SetDispRange(int disp_min, int disp_max)
+void Match::SetDispRange(int dMin, int dMax)
 {
-    dispMin = disp_min;
-    dispMax = disp_max;
+    dispMin = dMin;
+    dispMax = dMax;
     if (! (dispMin<=dispMax) ) {
         std::cerr << "Error: wrong disparity range!\n" << std::endl;
         exit(1);
     }
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p)
-        IMREF(x_left, *p) = OCCLUDED;
+        IMREF(d_left, *p) = OCCLUDED;
     end = rectEnd(imSizeR);
-    for(RectIterator p=rectBegin(imSizeR); p!=end; ++p)
-        IMREF(x_right,*p) = OCCLUDED;
+    for(RectIterator q=rectBegin(imSizeR); q!=end; ++q)
+        IMREF(d_right,*q) = OCCLUDED;
 }
