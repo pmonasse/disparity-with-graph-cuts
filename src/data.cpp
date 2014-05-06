@@ -50,10 +50,9 @@ inline int dist_interval(int v, int min, int max) {
 
 /// Birchfield-Tomasi gray distance between pixels p and q
 int Match::data_penalty_gray(Coord p, Coord q) const {
-    int Ip,IpMin,IpMax, Iq,IqMin,IqMax;
-    Ip    = IMREF(imLeft,    p); Iq    = IMREF(imRight,    q);
-    IpMin = IMREF(imLeftMin, p); IqMin = IMREF(imRightMin, q);
-    IpMax = IMREF(imLeftMax, p); IqMax = IMREF(imRightMax, q);
+    int Ip    = IMREF(imLeft,    p), Iq    = IMREF(imRight,    q);
+    int IpMin = IMREF(imLeftMin, p), IqMin = IMREF(imRightMin, q);
+    int IpMax = IMREF(imLeftMax, p), IqMax = IMREF(imRightMax, q);
 
     int dp = dist_interval(Ip, IqMin, IqMax);
     int dq = dist_interval(Iq, IpMin, IpMax);
@@ -66,54 +65,23 @@ int Match::data_penalty_gray(Coord p, Coord q) const {
 
 /// Birchfield-Tomasi color distance between pixels p and q
 int Match::data_penalty_color(Coord p, Coord q) const {
-    int dp, dq, d, dSum=0;
-    int Ip,IpMin,IpMax, Iq,IqMin,IqMax;
+    int dSum=0;
+    // Loop over the 3 channels
+    for(int i=0; i<3; i++) {
+        int Ip    = IMREF(imColorLeft,     p).c[i];
+        int Iq    = IMREF(imColorRight,    q).c[i];
+        int IpMin = IMREF(imColorLeftMin,  p).c[i];
+        int IqMin = IMREF(imColorRightMin, q).c[i];
+        int IpMax = IMREF(imColorLeftMax,  p).c[i];
+        int IqMax = IMREF(imColorRightMax, q).c[i];
 
-    // red component
-    Ip    = IMREF(imColorLeft,     p).r;
-    Iq    = IMREF(imColorRight,    q).r;
-    IpMin = IMREF(imColorLeftMin,  p).r;
-    IqMin = IMREF(imColorRightMin, q).r;
-    IpMax = IMREF(imColorLeftMax,  p).r;
-    IqMax = IMREF(imColorRightMax, q).r;
-
-    dp = dist_interval(Ip, IqMin, IqMax);
-    dq = dist_interval(Iq, IpMin, IpMax);
-    d = std::min(dp, dq);
-    if (d>CUTOFF) d = CUTOFF;
-    if (params.dataCost==Parameters::L2) d = d*d;
-    dSum += d;
-
-    // green component
-    Ip    = IMREF(imColorLeft,     p).g;
-    Iq    = IMREF(imColorRight,    q).g;
-    IpMin = IMREF(imColorLeftMin,  p).g;
-    IqMin = IMREF(imColorRightMin, q).g;
-    IpMax = IMREF(imColorLeftMax,  p).g;
-    IqMax = IMREF(imColorRightMax, q).g;
-
-    dp = dist_interval(Ip, IqMin, IqMax);
-    dq = dist_interval(Iq, IpMin, IpMax);
-    d = std::min(dp, dq);
-    if (d>CUTOFF) d = CUTOFF;
-    if (params.dataCost==Parameters::L2) d = d*d;
-    dSum += d;
-
-    // blue component
-    Ip    = IMREF(imColorLeft,     p).b;
-    Iq    = IMREF(imColorRight,    q).b;
-    IpMin = IMREF(imColorLeftMin,  p).b;
-    IqMin = IMREF(imColorRightMin, q).b;
-    IpMax = IMREF(imColorLeftMax,  p).b;
-    IqMax = IMREF(imColorRightMax, q).b;
-
-    dp = dist_interval(Ip, IqMin, IqMax);
-    dq = dist_interval(Iq, IpMin, IpMax);
-    d = std::min(dp, dq);
-    if (d>CUTOFF) d = CUTOFF;
-    if (params.dataCost==Parameters::L2) d = d*d;
-    dSum += d;
-
+        int dp = dist_interval(Ip, IqMin, IqMax);
+        int dq = dist_interval(Iq, IpMin, IpMax);
+        int d = std::min(dp, dq);
+        if(d>CUTOFF) d = CUTOFF;
+        if(params.dataCost==Parameters::L2) d = d*d;
+        dSum += d;
+    }
     return dSum/3;
 }
 
@@ -152,70 +120,31 @@ static void SubPixel(GrayImage Im, GrayImage ImMin, GrayImage ImMax) {
 
 /// Fill ImMin and ImMax from Im (color version)
 static void SubPixelColor(RGBImage Im, RGBImage ImMin, RGBImage ImMax) {
-    Coord p;
     int I, I1, I2, I3, I4, IMin, IMax;
+
+    Coord p;
     int xmax=imGetXSize(Im), ymax=imGetYSize(Im);
+    for(p.y=0; p.y<ymax; p.y++)
+    for(p.x=0; p.x<xmax; p.x++)
+        for(int i=0; i<3; i++) { // Loop over channels
+            I = IMin = IMax = imRef(Im, p.x, p.y).c[i];
+            I1 = (p.x>0?      (imRef(Im, p.x-1, p.y).c[i] + I) / 2: I);
+            I2 = (p.x+1<xmax? (imRef(Im, p.x+1, p.y).c[i] + I) / 2: I);
+            I3 = (p.y>0?      (imRef(Im, p.x, p.y-1).c[i] + I) / 2: I);
+            I4 = (p.y+1<ymax? (imRef(Im, p.x, p.y+1).c[i] + I) / 2: I);
 
-    for (p.y=0; p.y<ymax; p.y++)
-    for (p.x=0; p.x<xmax; p.x++)
-    {
-        // red component
-        I = IMin = IMax = imRef(Im, p.x, p.y).r;
-        I1 = (p.x>0?      (imRef(Im, p.x-1, p.y).r + I) / 2: I);
-        I2 = (p.x+1<xmax? (imRef(Im, p.x+1, p.y).r + I) / 2: I);
-        I3 = (p.y>0?      (imRef(Im, p.x, p.y-1).r + I) / 2: I);
-        I4 = (p.y+1<ymax? (imRef(Im, p.x, p.y+1).r + I) / 2: I);
+            if (IMin > I1) IMin = I1;
+            if (IMin > I2) IMin = I2;
+            if (IMin > I3) IMin = I3;
+            if (IMin > I4) IMin = I4;
+            if (IMax < I1) IMax = I1;
+            if (IMax < I2) IMax = I2;
+            if (IMax < I3) IMax = I3;
+            if (IMax < I4) IMax = I4;
 
-        if (IMin > I1) IMin = I1;
-        if (IMin > I2) IMin = I2;
-        if (IMin > I3) IMin = I3;
-        if (IMin > I4) IMin = I4;
-        if (IMax < I1) IMax = I1;
-        if (IMax < I2) IMax = I2;
-        if (IMax < I3) IMax = I3;
-        if (IMax < I4) IMax = I4;
-
-        imRef(ImMin, p.x, p.y).r = IMin;
-        imRef(ImMax, p.x, p.y).r = IMax;
-
-        // green component
-        I = IMin = IMax = imRef(Im, p.x, p.y).g;
-        I1 = (p.x>0?      (imRef(Im, p.x-1, p.y).g + I) / 2: I);
-        I2 = (p.x+1<xmax? (imRef(Im, p.x+1, p.y).g + I) / 2: I);
-        I3 = (p.y>0?      (imRef(Im, p.x, p.y-1).g + I) / 2: I);
-        I4 = (p.y+1<ymax? (imRef(Im, p.x, p.y+1).g + I) / 2: I);
-
-        if (IMin > I1) IMin = I1;
-        if (IMin > I2) IMin = I2;
-        if (IMin > I3) IMin = I3;
-        if (IMin > I4) IMin = I4;
-        if (IMax < I1) IMax = I1;
-        if (IMax < I2) IMax = I2;
-        if (IMax < I3) IMax = I3;
-        if (IMax < I4) IMax = I4;
-
-        imRef(ImMin, p.x, p.y).g = IMin;
-        imRef(ImMax, p.x, p.y).g = IMax;
-
-        // blue component
-        I = IMin = IMax = imRef(Im, p.x, p.y).b;
-        I1 = (p.x>0?      (imRef(Im, p.x-1, p.y).b + I) / 2: I);
-        I2 = (p.x+1<xmax? (imRef(Im, p.x+1, p.y).b + I) / 2: I);
-        I3 = (p.y>0?      (imRef(Im, p.x, p.y-1).b + I) / 2: I);
-        I4 = (p.y+1<ymax? (imRef(Im, p.x, p.y+1).b + I) / 2: I);
-
-        if (IMin > I1) IMin = I1;
-        if (IMin > I2) IMin = I2;
-        if (IMin > I3) IMin = I3;
-        if (IMin > I4) IMin = I4;
-        if (IMax < I1) IMax = I1;
-        if (IMax < I2) IMax = I2;
-        if (IMax < I3) IMax = I3;
-        if (IMax < I4) IMax = I4;
-
-        imRef(ImMin, p.x, p.y).b = IMin;
-        imRef(ImMax, p.x, p.y).b = IMax;
-    }
+            imRef(ImMin, p.x, p.y).c[i] = IMin;
+            imRef(ImMax, p.x, p.y).c[i] = IMax;
+        }
 }
 
 /// Preprocessing for faster Birchfield-Tomasi distance computation.
@@ -246,37 +175,23 @@ void Match::InitSubPixel() {
 
 /// Smoothness penalty between assignments (p1,p1+disp) and (p2,p2+disp).
 int Match::smoothness_penalty_gray(Coord p1, Coord p2, int disp) const {
-    int dl = IMREF(imLeft, p1) - IMREF(imLeft, p2);
+    // |I1(p1)-I1(p2)| and |I2(p1+disp)-I2(p2+disp)|
+    int dl = IMREF(imLeft,  p1     ) - IMREF(imLeft,  p2     );
     int dr = IMREF(imRight, p1+disp) - IMREF(imRight, p2+disp);
-
     if (dl<0) dl = -dl; if (dr<0) dr = -dr;
-
     return (dl<params.edgeThresh && dr<params.edgeThresh)?
         params.lambda1: params.lambda2;
 }
 
 /// Smoothness penalty between assignments (p1,p1+disp) and (p2,p2+disp).
 int Match::smoothness_penalty_color(Coord p1, Coord p2, int disp) const {
-    int d, dMax=0;
-
-    // red component
-    d = IMREF(imColorLeft, p1).r - IMREF(imColorLeft, p2).r;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-    d = IMREF(imColorRight, p1+disp).r - IMREF(imColorRight, p2+disp).r;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-
-    // green component
-    d = IMREF(imColorLeft, p1).g - IMREF(imColorLeft, p2).g;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-    d = IMREF(imColorRight, p1+disp).g - IMREF(imColorRight, p2+disp).g;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-
-    // blue component
-    d = IMREF(imColorLeft, p1).b - IMREF(imColorLeft, p2).b;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-    d = IMREF(imColorRight, p1+disp).b - IMREF(imColorRight, p2+disp).b;
-    if (d<0) d = -d; if (dMax<d) dMax = d;
-
+    int d, dMax=0; // Max inf norm in RGB space of (p1,p2) and (p1+disp,p2+disp)
+    for(int i=0; i<3; i++) {
+        d = IMREF(imColorLeft,  p1     ).c[i]-IMREF(imColorLeft,  p2     ).c[i];
+        if(d<0) d = -d; if (dMax<d) dMax = d;
+        d = IMREF(imColorRight, p1+disp).c[i]-IMREF(imColorRight, p2+disp).c[i];
+        if(d<0) d = -d; if (dMax<d) dMax = d;
+    }
     return (dMax<params.edgeThresh)? params.lambda1: params.lambda2;
 }
 

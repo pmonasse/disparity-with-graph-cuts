@@ -104,12 +104,12 @@ void Match::SaveScaledXLeft(const char *fileName, bool flag)
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
         int d = IMREF(d_left,*p), c;
         if (d==OCCLUDED) {
-            IMREF(im,*p).r=0; IMREF(im,*p).g=IMREF(im,*p).b=255;
+            IMREF(im,*p).c[0]=0; IMREF(im,*p).c[1]=IMREF(im,*p).c[2]=255;
         } else {
             if (dispSize == 0) c = 255;
             else if (flag) c = 255 - (255-64)*(dispMax - d)/dispSize;
             else           c = 255 - (255-64)*(d - dispMin)/dispSize;
-            IMREF(im,*p).r=IMREF(im,*p).g=IMREF(im,*p).b = c;
+            IMREF(im,*p).c[0]=IMREF(im,*p).c[1]=IMREF(im,*p).c[2] = c;
         }
     }
 

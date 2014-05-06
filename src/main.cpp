@@ -25,8 +25,8 @@ bool isGray(RGBImage im) {
     const int xsize=imGetXSize(im), ysize=imGetYSize(im);
     for(int y=0; y<ysize; y++)
         for(int x=0; x<xsize; x++)
-            if(imRef(im,x,y).r != imRef(im,x,y).g ||
-               imRef(im,x,y).r != imRef(im,x,y).b)
+            if(imRef(im,x,y).c[0] != imRef(im,x,y).c[1] ||
+               imRef(im,x,y).c[0] != imRef(im,x,y).c[2])
                 return false;
     return true;
 }
@@ -37,7 +37,7 @@ void convert_gray(GeneralImage& im) {
     GrayImage g = (GrayImage)imNew(IMAGE_GRAY, xsize, ysize);
     for(int y=0; y<ysize; y++)
         for(int x=0; x<xsize; x++)
-            imRef(g,x,y) = imRef((RGBImage)im,x,y).r;
+            imRef(g,x,y) = imRef((RGBImage)im,x,y).c[0];
     imFree(im);
     im = (GeneralImage)g;
 }

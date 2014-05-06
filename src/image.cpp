@@ -179,9 +179,9 @@ void* imLoad(ImageType type, const char *filename)
     if(type == IMAGE_RGB) {
         const size_t r=0*stepColor, g=1*stepColor, b=2*stepColor;
         for(size_t i=0, j=0; i<size; i++, j+=stepPixel) {
-            imRef((RGBImage)im,i,0).r = data[j+r];
-            imRef((RGBImage)im,i,0).g = data[j+g];
-            imRef((RGBImage)im,i,0).b = data[j+b];
+            imRef((RGBImage)im,i,0).c[0] = data[j+r];
+            imRef((RGBImage)im,i,0).c[1] = data[j+g];
+            imRef((RGBImage)im,i,0).c[2] = data[j+b];
         }
     }
     free(data);
@@ -223,9 +223,9 @@ int imSave(void *im, const char *filename)
         unsigned char *g=data+1*size;
         unsigned char *b=data+2*size;        
         for(size_t i=0; i<size; i++) {
-            *r++ = imRef((RGBImage)im,i,0).r;
-            *g++ = imRef((RGBImage)im,i,0).g;
-            *b++ = imRef((RGBImage)im,i,0).b;
+            *r++ = imRef((RGBImage)im,i,0).c[0];
+            *g++ = imRef((RGBImage)im,i,0).c[1];
+            *b++ = imRef((RGBImage)im,i,0).c[2];
         }
         int res = io_png_write_u8(filename, data, xsize, ysize, 3);
         delete [] data;
@@ -250,9 +250,9 @@ int imSave(void *im, const char *filename)
     case IMAGE_RGB: {
         RGBImage rgb = (RGBImage)im;
         for (i=0; i<xsize*ysize; i++) {
-            if (im_max < rgb->data[i].r) im_max = rgb->data[i].r;
-            if (im_max < rgb->data[i].g) im_max = rgb->data[i].g;
-            if (im_max < rgb->data[i].b) im_max = rgb->data[i].b;
+            if (im_max < rgb->data[i].c[0]) im_max = rgb->data[i].c[0];
+            if (im_max < rgb->data[i].c[1]) im_max = rgb->data[i].c[1];
+            if (im_max < rgb->data[i].c[2]) im_max = rgb->data[i].c[2];
         }}
         fprintf(fp, "P6\n%d %d\n%d\n", xsize, ysize, im_max);
         break;

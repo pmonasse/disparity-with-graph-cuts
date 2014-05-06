@@ -72,7 +72,7 @@ typedef struct ImageHeader_st
 typedef struct GeneralImage_t {void*data;} *GeneralImage;
 
 typedef struct GrayImage_t  {unsigned char                 *data;} *GrayImage;
-typedef struct RGBImage_t   {struct {unsigned char r,g,b;} *data;} *RGBImage;
+typedef struct RGBImage_t   {struct {unsigned char c[3];} *data;} *RGBImage;
 typedef struct IntImage_t   {int                           *data;} *IntImage;
 typedef struct FloatImage_t {float                         *data;} *FloatImage;
 
