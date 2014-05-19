@@ -1,5 +1,5 @@
 #ifndef _IO_TIFF_H
-#define _IO_ITFF_H
+#define _IO_TIFF_H
 
 #ifdef __cplusplus
 extern "C" {

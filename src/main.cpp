@@ -105,7 +105,7 @@ void fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
                     gcd(params.lambda1,
                         gcd(params.lambda2,
                             params.denominator)));
-    if(denom) {
+    if(denom) { // Reduce fractions to minimize risk of overflow
         params.K /= denom;
         params.lambda1 /= denom;
         params.lambda2 /= denom;
@@ -117,10 +117,10 @@ void fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
 int main(int argc, char *argv[]) {
     // Default parameters
     Match::Parameters params = {
-        Match::Parameters::L2, 1, // data_cost, denominator
-        8, -1, -1,                // I_threshold2, lambda1, lambda2 */
-        -1,                       // K
-        4, false                  // iter_max, randomize_every_iteration
+        Match::Parameters::L2, 1, // dataCost, denominator
+        8, -1, -1, // edgeThresh, lambda1, lambda2 (smoothness cost)
+        -1,        // K (occlusion cost)
+        4, false   // maxIter, bRandomizeEveryIteration
     };
 
     CmdLine cmd;
