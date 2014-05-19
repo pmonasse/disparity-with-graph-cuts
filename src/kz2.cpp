@@ -88,11 +88,11 @@ void Match::build_nodes(Energy& e, Coord p, int a) {
         return;
     }
 
-    IMREF(vars0, p) = (d!=OCCLUDED)? // assignment (p,p+d) in A^0
+    IMREF(vars0, p) = (d!=OCCLUDED)? // (p,p+d) in A^0 can remain active
         e.add_variable(data_occlusion_penalty(p,q), 0): VAR_ABSENT;
 
     q = p+a;
-    IMREF(varsA, p) = inRect(q,imSizeR)? // assignment (p,p+a) in A^a
+    IMREF(varsA, p) = inRect(q,imSizeR)? // (p,p+a) in A^a can become active
         e.add_variable(0, data_occlusion_penalty(p,q)): VAR_ABSENT;
 }
 
@@ -118,20 +118,20 @@ void Match::build_smoothness(Energy& e, Coord p1, Coord p2, int a) {
             e.add_term1(a2, delta, 0); // Penalize (p2,p2+a) inactive
     }
 
-    // disparity d1 (if not a)
-    if(IS_VAR(o1) && inRect(p2+d1,imSizeR)) {
-        int delta = smoothness_penalty(p1, p2, d1);
-        if(d1 == d2) // Penalize different activity
-            e.add_term2(o1, o2, 0, delta, delta, 0);
-        else // (p2,p2+d1) inactive, so penalize (p1,p1+d1) active
-            e.add_term1(o1, delta, 0);
+    // disparity d==nd!=a
+    if(d1==d2 && IS_VAR(o1) && IS_VAR(o2)) {
+        assert(d1!=a && d1!=OCCLUDED);
+        int delta = smoothness_penalty(p1,p2,d1);
+        e.add_term2(o1, o2, 0, delta, delta, 0); // Penalize different activity
     }
 
-    // disparity d2 (not a, d1): (p1,p1+d2) inactive, penalize (p2,p2+d2) active
-    if(IS_VAR(o2) && d1!=d2 && inRect(p1+d2,imSizeR)) {
-        int delta = smoothness_penalty(p1, p2, d2);
-        e.add_term1(o2, delta, 0);
-    }
+    // disparity d1, a!=d1!=d2, (p2,p2+d1) inactive neighbor assignment
+    if(d1!=d2 && IS_VAR(o1) && inRect(p2+d1,imSizeR))
+        e.add_term1(o1, smoothness_penalty(p1,p2,d1), 0);
+
+    // disparity d2, a!=d2!=d1, (p1,p1+d2) inactive neighbor assignment
+    if(d2!=d1 && IS_VAR(o2) && inRect(p1+d2,imSizeR))
+        e.add_term1(o2, smoothness_penalty(p1,p2,d2), 0);
 }
 
 /// Build edges in graph enforcing uniqueness at pixel p.
@@ -147,13 +147,15 @@ void Match::build_uniqueness_LR(Energy& e, Coord p) {
 /// Build edges in graph enforcing uniqueness at pixel q.
 /// Prevent (q-d,q) and (q-alpha,q) from being both active.
 void Match::build_uniqueness_RL(Energy& e, Coord q, int alpha) {
-    int d = IMREF(d_right, q);
-    if(d==OCCLUDED) return;
-    Energy::Var o = (Energy::Var) IMREF(vars0, q+d);
+    int minusd = IMREF(d_right, q);
+    if(minusd==OCCLUDED) return;
+    Energy::Var o = (Energy::Var) IMREF(vars0, q+minusd);
+    assert(o!=VAR_ABSENT); // since d_right is inverse of d_left
     if(o!=VAR_ALPHA) {
         Coord p = q-alpha;
         if(inRect(p,imSizeL)) {
             Energy::Var a = (Energy::Var) IMREF(varsA, p);
+            assert(IS_VAR(a)); // not active because of current uniqueness
             e.forbid01(o, a);
         }
     }
@@ -179,7 +181,7 @@ void Match::update_disparity(const Energy& e, int alpha) {
 ///
 /// Return whether the move is different from identity.
 bool Match::ExpansionMove(int a) {
-    // Factors 2 and 12 are minimual ensuring no rellocation
+    // Factors 2 and 12 are minimal ensuring no reallocation
     Energy e(2*imSizeL.x*imSizeL.y, 12*imSizeL.x*imSizeL.y);
 
     // Build graph
@@ -210,7 +212,9 @@ bool Match::ExpansionMove(int a) {
     return false;
 }
 
-/// Generate a random permutation of the array elements
+/// Generate a random permutation of the array elements.
+///
+/// Fisher-Yates shuffle: http://en.wikipedia.org/wiki/Fisher–Yates_shuffle
 static void generate_permutation(int *buf, int n) {
     for(int i=0; i<n; i++) buf[i] = i;
     for(int i=0; i<n-1; i++) {
