@@ -161,3 +161,7 @@ endif(UNIX)
 if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 endif(CMAKE_COMPILER_IS_GNUCXX)
+
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+endif(MSVC)

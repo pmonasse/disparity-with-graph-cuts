@@ -72,14 +72,14 @@ set(CMAKE_DEBUG_POSTFIX "d")
 # configured directly (to do so indirectly use your local awk to build a
 # pnglibconf.h in the build directory.)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt
-               ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+               ${CMAKE_CURRENT_SOURCE_DIR}/pnglibconf.h)
+#include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # OUR SOURCES
 set(libpng_public_hdrs
   png.h
   pngconf.h
-  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pnglibconf.h
 )
 set(libpng_sources
   ${libpng_public_hdrs}

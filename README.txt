@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0-rc2 released on 2014/04/02
+Version 1.0-rc3 released on 2014/05/20
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -85,9 +85,9 @@ src/statistics.cpp (*)
 src/main.cpp (*)
 src/energy/energy.h (*)
 src/energy/test_energy.cpp
-src/maxflow/graph.h (*)
-src/maxflow/graph.cpp (*)
-src/maxflow/maxflow.cpp (*)
+src/maxflow/graph.h
+src/maxflow/graph.cpp
+src/maxflow/maxflow.cpp
 src/third_party/... (sources of libPNG, libTIFF and their dependencies)
 
 LIMITATIONS
