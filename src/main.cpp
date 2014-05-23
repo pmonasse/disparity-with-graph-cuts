@@ -55,23 +55,38 @@ bool GetFraction(const std::string& s, int& numerator, int& denominator) {
     return ok;
 }
 
+/// Multiply lambda, lambda, lambda1, lambda2, K, denominator by denom.
+void multLambdaK(int& lambda, int denom[5], Match::Parameters& params) {
+    lambda             *= denom[0];
+    params.lambda1     *= denom[1];
+    params.lambda2     *= denom[2];
+    params.K           *= denom[3];
+    params.denominator *= denom[4];
+}
+
 /// Set lambda to value lambda/denom. As we have to keep as int, we need to
 /// modify the overall params.denominator in consequence.
 void setLambda(int& lambda, int denom, Match::Parameters& params) {
-    lambda             *= params.denominator;
-    params.lambda1     *= denom;
-    params.lambda2     *= denom;
-    params.K           *= denom;
-    params.denominator *= denom;
+    int mult[] = {params.denominator,denom,denom,denom,denom};
+    multLambdaK(lambda, mult, params);
+}
+
+/// Set lambda1 to value lambda1/denom. See setLambda for explanation.
+void setLambda1(int& lambda, int denom, Match::Parameters& params) {
+    int mult[] = {denom,params.denominator,denom,denom,denom};
+    multLambdaK(lambda, mult, params);
+}
+
+/// Set lambda2 to value lambda2/denom. See setLambda for explanation.
+void setLambda2(int& lambda, int denom, Match::Parameters& params) {
+    int mult[] = {denom,denom,params.denominator,denom,denom};
+    multLambdaK(lambda, mult, params);
 }
 
 /// Set params.K to value params.K/denom. See setLambda for explanation.
 void setK(int& lambda, int denom, Match::Parameters& params) {
-    lambda             *= denom;
-    params.lambda1     *= denom;
-    params.lambda2     *= denom;
-    params.K           *= params.denominator;
-    params.denominator *= denom;
+    int mult[] = {denom,denom,denom,params.denominator,denom};
+    multLambdaK(lambda, mult, params);
 }
 
 /// GCD of integers
@@ -86,7 +101,8 @@ int gcd(int a, int b) {
 /// - K may be computed automatically and lambda set to K/5.
 /// - lambda1=3*lambda, lambda2=lambda
 /// As the graph requires integer weights, use fractions and common denominator.
-void fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
+/// Return the denominator of lambda.
+int fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
     if(lambda<0) { // Set lambda to K/5
         float K = params.K/(float)params.denominator;
         if(params.K<=0) { // Automatic computation of K
@@ -103,15 +119,24 @@ void fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
     if(params.lambda2<0) params.lambda2 = lambda;
     int denom = gcd(params.K,
                     gcd(params.lambda1,
-                        gcd(params.lambda2,
-                            params.denominator)));
-    if(denom) { // Reduce fractions to minimize risk of overflow
+                            gcd(params.lambda2,
+                                params.denominator)));
+    int denomLambda = params.denominator;
+    if(denom>1) { // Reduce fractions to minimize risk of overflow
+        denomLambda = denom;
         params.K /= denom;
         params.lambda1 /= denom;
         params.lambda2 /= denom;
         params.denominator /= denom;
     }
     m.SetParameters(&params);
+    // Reduce fraction lambda/denomLambda
+    denom = gcd(lambda, denomLambda);
+    if(denom>1) {
+        lambda /= denom;
+        denomLambda /= denom;
+    }
+    return denomLambda;
 }
 
 int main(int argc, char *argv[]) {
@@ -171,6 +196,16 @@ int main(int argc, char *argv[]) {
         if(! GetFraction(slambda, lambda, denom)) return 1;
         setLambda(lambda, denom, params);
     }
+    if(! slambda1.empty()) {
+        int denom;
+        if(! GetFraction(slambda1, params.lambda1, denom)) return 1;
+        setLambda1(lambda, denom, params);
+    }
+    if(! slambda2.empty()) {
+        int denom;
+        if(! GetFraction(slambda2, params.lambda2, denom)) return 1;
+        setLambda2(lambda, denom, params);
+    }
     if(! sK.empty()) {
         int denom;
         if(! GetFraction(sK, params.K, denom)) return 1;
@@ -207,7 +242,7 @@ int main(int argc, char *argv[]) {
     time_t seed = time(NULL);
     srand((unsigned int)seed);
 
-    fix_parameters(m, params, lambda);
+    int denomLambda = fix_parameters(m, params, lambda);
     if(argc>5 || !sDisp.empty()) {
         m.KZ2();
         if(argc>5)
@@ -219,7 +254,7 @@ int main(int argc, char *argv[]) {
         if(params.denominator!=1) std::cout << "/" << params.denominator;
         std::cout << std::endl;
         std::cout << "lambda=" << lambda;
-        if(params.denominator!=1) std::cout << "/" << params.denominator;
+        if(denomLambda!=1) std::cout << "/" << denomLambda;
         std::cout << std::endl;
     }
 
