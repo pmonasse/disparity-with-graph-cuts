@@ -32,7 +32,8 @@ float Match::GetK()
     std::fill_n(array, k, 0);
     int sum=0, num=0;
 
-    int xmin = 0-std::min(dispMin,0), xmax=imSizeR.x-std::max(dispMax,0);
+    int xmin = std::max(0,-dispMin); // 0<=x,x+dispMin
+    int xmax = std::min(imSizeL.x,imSizeR.x-dispMax); // x<wl,x+dispMax<wr
     Coord p;
     for(p.y=0; p.y<imSizeL.y && p.y<imSizeR.y; p.y++)
     for(p.x=xmin; p.x<xmax; p.x++) {

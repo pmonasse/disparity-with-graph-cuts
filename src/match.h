@@ -57,6 +57,7 @@ public:
 
 private:
     Coord imSizeL, imSizeR; ///< image dimensions
+    int originalHeightL; ///< true left image height before possible crop
     GrayImage imLeft, imRight;          ///< original images (if gray)
     RGBImage imColorLeft, imColorRight; ///< original images (if color)
     GrayImage imLeftMin, imLeftMax;     ///< range of gray based on neighbors

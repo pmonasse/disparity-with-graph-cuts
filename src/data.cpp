@@ -93,11 +93,10 @@ int Match::data_penalty_color(Coord p, Coord q) const {
 static void SubPixel(GrayImage Im, GrayImage ImMin, GrayImage ImMax) {
     Coord p;
     int I, I1, I2, I3, I4, IMin, IMax;
-    int xmax=imGetXSize(Im), ymax=imGetYSize(Im);
+    int xmax=imGetXSize(ImMin), ymax=imGetYSize(ImMin);
 
     for (p.y=0; p.y<ymax; p.y++)
-    for (p.x=0; p.x<xmax; p.x++)
-    {
+    for (p.x=0; p.x<xmax; p.x++) {
         I = IMin = IMax = imRef(Im, p.x, p.y);
         I1 = (p.x>0?      (imRef(Im, p.x-1, p.y) + I) / 2: I);
         I2 = (p.x+1<xmax? (imRef(Im, p.x+1, p.y) + I) / 2: I);
@@ -123,7 +122,7 @@ static void SubPixelColor(RGBImage Im, RGBImage ImMin, RGBImage ImMax) {
     int I, I1, I2, I3, I4, IMin, IMax;
 
     Coord p;
-    int xmax=imGetXSize(Im), ymax=imGetYSize(Im);
+    int xmax=imGetXSize(ImMin), ymax=imGetYSize(ImMin);
     for(p.y=0; p.y<ymax; p.y++)
     for(p.x=0; p.x<xmax; p.x++)
         for(int i=0; i<3; i++) { // Loop over channels

@@ -24,10 +24,11 @@
 const int Match::OCCLUDED = std::numeric_limits<int>::max();
 
 /// Constructor
-Match::Match(GeneralImage left, GeneralImage right, bool color)
-{
-    imSizeL = Coord(imGetXSize(left),imGetYSize(left));
-    imSizeR = Coord(imGetXSize(right),imGetYSize(right));
+Match::Match(GeneralImage left, GeneralImage right, bool color) {
+    originalHeightL = imGetYSize(left);
+    int height = std::min(imGetYSize(left), imGetYSize(right));
+    imSizeL = Coord(imGetXSize(left), height);
+    imSizeR = Coord(imGetXSize(right),height);
 
     if (!color) {
         imColorLeft = imColorRight = 0;
@@ -60,8 +61,7 @@ Match::Match(GeneralImage left, GeneralImage right, bool color)
 }
 
 /// Destructor
-Match::~Match()
-{
+Match::~Match() {
     imFree(imLeftMin);
     imFree(imLeftMax);
     imFree(imRightMin);
@@ -79,11 +79,15 @@ Match::~Match()
 }
 
 /// Save disparity map as float TIFF image
-void Match::SaveXLeft(const char *fileName)
-{
-    FloatImage out = (FloatImage)imNew(IMAGE_FLOAT, imSizeL);
+void Match::SaveXLeft(const char *fileName) {
+    Coord outSize(imSizeL.x,originalHeightL);
+    FloatImage out = (FloatImage)imNew(IMAGE_FLOAT,outSize);
 
-    RectIterator end=rectEnd(imSizeL);
+    RectIterator end=rectEnd(outSize);
+    for(RectIterator p=rectBegin(outSize); p!=end; ++p)
+        IMREF(out,*p) = NaN;
+
+    end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
         int d=IMREF(d_left,*p);
         IMREF(out,*p) = (d==OCCLUDED? NaN: static_cast<float>(d));
@@ -95,12 +99,18 @@ void Match::SaveXLeft(const char *fileName)
 
 /// Save scaled disparity map as 8-bit color image (gray between 64 and 255).
 /// flag: lowest disparity should appear darkest (true) or brightest (false).
-void Match::SaveScaledXLeft(const char *fileName, bool flag)
-{
-    RGBImage im = (RGBImage)imNew(IMAGE_RGB, imSizeL);
+void Match::SaveScaledXLeft(const char *fileName, bool flag) {
+    Coord outSize(imSizeL.x,originalHeightL);
+    RGBImage im = (RGBImage)imNew(IMAGE_RGB, outSize);
+
+    RectIterator end=rectEnd(outSize);
+    for(RectIterator p=rectBegin(outSize); p!=end; ++p) {
+        IMREF(im,*p).c[0] = 0; IMREF(im,*p).c[1]=IMREF(im,*p).c[2]=255;
+    }
+
     const int dispSize = dispMax-dispMin+1;
 
-    RectIterator end=rectEnd(imSizeL);
+    end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
         int d = IMREF(d_left,*p), c;
         if (d==OCCLUDED) {
@@ -118,8 +128,7 @@ void Match::SaveScaledXLeft(const char *fileName, bool flag)
 }
 
 /// Specify disparity range
-void Match::SetDispRange(int dMin, int dMax)
-{
+void Match::SetDispRange(int dMin, int dMax) {
     dispMin = dMin;
     dispMax = dMax;
     if (! (dispMin<=dispMax) ) {
