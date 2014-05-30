@@ -3,10 +3,10 @@
  * @brief Maximum flow computation by Kolmogorov-Boykov algorithm
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
- * 
+ *
  * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,7 +24,7 @@
 /// Mark node as active.
 /// i->next points to the next active node (or itself, if last).
 /// i->next is 0 iff i should not be considered in the queue.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::set_active(node* i)
 {
     if (!i->next) { // not yet in the list
@@ -42,7 +42,7 @@ void Graph<captype,tcaptype,flowtype>::set_active(node* i)
 /// later appear to be orphan too. To avoid having to remove them explicitly
 /// we just have their parent set to null, so when the front node in the
 /// queue has a null parent, we just ignore it.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 typename Graph<captype,tcaptype,flowtype>::node*
 Graph<captype,tcaptype,flowtype>::next_active()
 {
@@ -58,7 +58,7 @@ Graph<captype,tcaptype,flowtype>::next_active()
 }
 
 /// Set node as orphan.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::set_orphan(node* i)
 {
     i->parent = ORPHAN;
@@ -66,7 +66,7 @@ void Graph<captype,tcaptype,flowtype>::set_orphan(node* i)
 }
 
 /// Set active nodes at distance 1 from a terminal node.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::maxflow_init()
 {
     // Put two fictive arcs
@@ -196,7 +196,7 @@ void Graph<captype,tcaptype,flowtype>::augment(arc* midarc)
 
 /// Number of nodes of path from the root of the tree to node j.
 /// Return max integer in case there is no path.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 int Graph<captype,tcaptype,flowtype>::dist_to_root(node* j)
 {
     int d = 2; // count nodes j and root
@@ -212,7 +212,7 @@ int Graph<captype,tcaptype,flowtype>::dist_to_root(node* j)
 }
 
 /// Try to reconnect orphan to its original tree.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::process_orphan(node* i)
 {
     int dmin=std::numeric_limits<int>::max();
@@ -264,7 +264,7 @@ void Graph<captype,tcaptype,flowtype>::adopt_orphans()
 }
 
 /// Compute the maxflow.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 flowtype Graph<captype,tcaptype,flowtype>::maxflow()
 {
     maxflow_init();

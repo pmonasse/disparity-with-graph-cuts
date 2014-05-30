@@ -3,10 +3,10 @@
  * @brief Graph structure
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
- * 
+ *
  * Copyright (c) 2001-2003, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,7 +21,7 @@
 
 /// Constructor.
 /// For efficiency, it is advised to give appropriate hint sizes.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 Graph<captype, tcaptype, flowtype>::Graph(int hintNbNodes, int hintNbArcs)
 : nodes(), arcs(), flow(0), activeBegin(0),activeEnd(0), orphans(), time(0),
   TERMINAL(0), ORPHAN(0)
@@ -31,12 +31,12 @@ Graph<captype, tcaptype, flowtype>::Graph(int hintNbNodes, int hintNbArcs)
 }
 
 /// Destructor
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 Graph<captype,tcaptype,flowtype>::~Graph()
 {}
 
-/// Add node to the graph. First call returns 0, second 1, and so on. 
-template <typename captype, typename tcaptype, typename flowtype> 
+/// Add node to the graph. First call returns 0, second 1, and so on.
+template <typename captype, typename tcaptype, typename flowtype>
 typename Graph<captype,tcaptype,flowtype>::node_id
 Graph<captype,tcaptype,flowtype>::add_node()
 {
@@ -47,7 +47,7 @@ Graph<captype,tcaptype,flowtype>::add_node()
 }
 
 /// Add two edges between 'i' and 'j' with the weights 'capij' and 'capji'
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
                                                 captype capij, captype capji)
 {
@@ -69,7 +69,7 @@ void Graph<captype,tcaptype,flowtype>::add_edge(node_id i, node_id j,
 }
 
 /// Add edge with infinite capacity from node 'i' to 'j'
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::add_edge_infty(node_id i, node_id j)
 {
     add_edge(i, j, std::numeric_limits<captype>::max(), 0);
@@ -79,7 +79,7 @@ void Graph<captype,tcaptype,flowtype>::add_edge_infty(node_id i, node_id j)
 /// Can be called multiple times for each node.
 /// Weights can be negative.
 /// No internal memory is allocated by this call.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
                                                     tcaptype capS,
                                                     tcaptype capT)
@@ -96,7 +96,7 @@ void Graph<captype,tcaptype,flowtype>::add_tweights(node_id i,
 /// node 'i' belongs (SOURCE or SINK).
 /// Occasionally there may be several minimum cuts. If a node can be assigned
 /// to both the source and the sink, then default def is returned.
-template <typename captype, typename tcaptype, typename flowtype> 
+template <typename captype, typename tcaptype, typename flowtype>
 typename Graph<captype,tcaptype,flowtype>::termtype
 Graph<captype,tcaptype,flowtype>::what_segment(node_id i, termtype def) const
 {

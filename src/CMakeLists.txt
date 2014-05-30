@@ -1,8 +1,9 @@
+SET(SRC_C io_tiff.c io_tiff.h
+          io_png.c io_png.h)
+ 
 SET(SRC cmdLine.h
         data.cpp
         image.cpp image.h
-        io_tiff.c io_tiff.h
-        io_png.c io_png.h
         kz2.cpp
         main.cpp
         match.cpp match.h
@@ -38,13 +39,15 @@ ENDIF(NOT TIFF_FOUND)
 ADD_DEFINITIONS(${PNG_DEFINITIONS} -DHAS_PNG)
 ADD_DEFINITIONS(${TIFF_DEFINITIONS} -DHAS_TIFF)
 
-ADD_EXECUTABLE(KZ2 ${SRC} ${SRC_ENERGY} ${SRC_MAXFLOW})
+ADD_EXECUTABLE(KZ2 ${SRC} ${SRC_ENERGY} ${SRC_MAXFLOW} ${SRC_C})
 INCLUDE_DIRECTORIES(energy maxflow)
 TARGET_LINK_LIBRARIES(KZ2 ${TIFF_LIBRARIES} ${PNG_LIBRARIES})
 
 IF(UNIX)
-    SET_TARGET_PROPERTIES(KZ2 PROPERTIES COMPILE_FLAGS
-                          "-ansi -Wall -Wextra -Werror")
+   SET_SOURCE_FILES_PROPERTIES(${SRC} PROPERTIES
+                                COMPILE_FLAGS "-Wall -Wextra -Werror -std=c++98")
+    SET_SOURCE_FILES_PROPERTIES(${SRC_C} PROPERTIES
+                                COMPILE_FLAGS "-Wall -Wextra -Werror -std=c89")
 ENDIF(UNIX)
 IF(MSVC)
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)

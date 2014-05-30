@@ -27,22 +27,21 @@ Example usage - converting color image in.ppm to gray image out.pgm:
 ...
 
 RGBImage rgb = (RGBImage) imLoad(IMAGE_RGB, "in.ppm");
-if (!rgb) { fprintf(stderr, "Can't open in.ppm\n"); exit(1); }
+if(!rgb) { fprintf(stderr, "Can't open in.ppm\n"); exit(1); }
 int x, y, xsize = imGetXSize(rgb), ysize = imGetYSize(rgb);
 
 GrayImage gray = (GrayImage) imNew(IMAGE_GRAY, xsize, ysize);
-if (!gray) { fprintf(stderr, "Not enough memory\n"); exit(1); }
+if(!gray) { fprintf(stderr, "Not enough memory\n"); exit(1); }
 
-for (y=0; y<ysize; y++)
-for (x=0; x<xsize; x++)
-{
+for(y=0; y<ysize; y++)
+for(x=0; x<xsize; x++) {
     int r = imRef(rgb, x, y).r;
     int g = imRef(rgb, x, y).g;
     int b = imRef(rgb, x, y).b;
     imRef(gray, x, y) = (r + g + b) / 3;
 }
 
-if (imSave(gray, "out.pgm") != 0) { fprintf(stderr, "Can't save out.pgm\n"); }
+if(imSave(gray, "out.pgm") != 0) { fprintf(stderr, "Can't save out.pgm\n"); }
 
 imFree(rgb);
 imFree(gray);

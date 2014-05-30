@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0-rc4 released on 2014/05/24
+Version 1.0-rc5 released on 2014/05/30
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -90,7 +90,7 @@ src/maxflow/graph.cpp
 src/maxflow/maxflow.cpp
 src/third_party/... (sources of libPNG, libTIFF and their dependencies)
 
-LIMITATIONS
+Limitations
 -----------
 The software is a bit slower (10-20%) than the original code Match of V. Kolmogorov due to memory management of the graph. Match allocates sets of nodes and edges with malloc/realloc, and stores directly pointers to link nodes and edges. It has thus to adjust the pointers when realloc changes array address. This results in ugly code with offsets to pointers but:
 - Match has faster max-flow computation since it uses pointers to follow paths while KZ2 uses index in std::vector.

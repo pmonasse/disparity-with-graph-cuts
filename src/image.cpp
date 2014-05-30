@@ -3,10 +3,10 @@
  * @brief Data structure for images and input/output
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
- * 
+ *
  * Copyright (c) 2001, 2012-2014, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -221,7 +221,7 @@ int imSave(void *im, const char *filename)
         unsigned char* data = new unsigned char[3*size];
         unsigned char *r=data+0*size;
         unsigned char *g=data+1*size;
-        unsigned char *b=data+2*size;        
+        unsigned char *b=data+2*size;
         for(size_t i=0; i<size; i++) {
             *r++ = imRef((RGBImage)im,i,0).c[0];
             *g++ = imRef((RGBImage)im,i,0).c[1];

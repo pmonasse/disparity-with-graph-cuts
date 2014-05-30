@@ -3,10 +3,10 @@
  * @brief Example of usage of energy.h
  * @author Vladimir Kolmogorov <vnk@cs.cornell.edu>
  *         Pascal Monasse <monasse@imagine.enpc.fr>
- * 
+ *
  * Copyright (c) 2001-2003, 2012-2013, Vladimir Kolmogorov, Pascal Monasse
  * All rights reserved.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -20,7 +20,7 @@
 #include "energy.h"
 
 /// Minimize the following function of 3 binary variables:
-/// E(x, y, z) = x - 2*y + 3*(1-z) - 4*x*y + 5*|y-z|     
+/// E(x, y, z) = x - 2*y + 3*(1-z) - 4*x*y + 5*|y-z|
 int main()
 {
     Energy::Var x, y, z;
@@ -30,7 +30,7 @@ int main()
     y = e.add_variable();
     z = e.add_variable();
 
-    e.add_term1(x, 0, 1);           // add term x 
+    e.add_term1(x, 0, 1);           // add term x
     e.add_term1(y, 0, -2);          // add term -2*y
     e.add_term1(z, 3, 0);           // add term 3*(1-z)
 

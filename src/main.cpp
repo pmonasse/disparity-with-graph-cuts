@@ -2,10 +2,10 @@
  * @file main.cpp
  * @brief Main program for Kolmogorov-Zabih disparity estimation with graph cuts
  * @author Pascal Monasse <monasse@imagine.enpc.fr>
- * 
+ *
  * Copyright (c) 2012-2014, Pascal Monasse
  * All rights reserved.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
