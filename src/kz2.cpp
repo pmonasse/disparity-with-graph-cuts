@@ -20,6 +20,8 @@
 #include "energy.h"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
+#include <string>
 #include <cassert>
 
 /// (half of) the neighborhood system.
@@ -277,17 +279,17 @@ void Match::KZ2() {
         exit(1);
     }
 
-    if(params.denominator == 1)
-        std::cout << "KZ2:  K=" << params.K << std::endl
-                  << "      edgeTreshold=" << params.edgeThresh
-                  << ", lambda1=" << params.lambda1
-                  << ", lambda2=" << params.lambda2;
-    else
-        std::cout << "KZ2:  K=" << params.K<<'/'<<params.denominator <<std::endl
-                  << "      edgeThreshold=" << params.edgeThresh
-                  << ", lambda1=" << params.lambda1<<'/'<<params.denominator
-                  << ", lambda2=" << params.lambda1<<'/'<<params.denominator;
-    std::cout << ", dataCost = L" <<
+    std::string strDenom; // Denominator as output string
+    if(params.denominator!=1) {
+        std::ostringstream s;
+        s << params.denominator;
+        strDenom = "/" + s.str();
+    }
+    std::cout << "KZ2:  K=" << params.K << strDenom <<std::endl
+              << "      edgeThreshold=" << params.edgeThresh
+              << ", lambda1=" << params.lambda1 << strDenom
+              << ", lambda2=" << params.lambda2 << strDenom
+              << ", dataCost = L" <<
         ((params.dataCost==Parameters::L1)? '1': '2') << std::endl;
 
     run();
