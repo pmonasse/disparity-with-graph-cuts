@@ -17,8 +17,17 @@
 
 #include "match.h"
 #include "cmdLine.h"
+#include <limits>
+#include <cmath>
 #include <ctime>
-#include <cstdio>
+
+/// Max denominator for fractions. We need to approximate float values as
+/// fractions since the max-flow is implemented using short integers. The
+/// denominator multiplies the data term in Match::data_occlusion_penalty. To
+/// avoid overflow, we have to make sure this stays below 2^15 (max short).
+/// The data term can reach (CUTOFF=30<2^5)^2<2^10 if using L2 norm, so a
+/// denominator up to 2^4 will reach 2^14 and not provoke overflow.
+static const int MAX_DENOM=1<<4;
 
 /// Is the color image actually gray?
 bool isGray(RGBImage im) {
@@ -42,58 +51,30 @@ void convert_gray(GeneralImage& im) {
     im = (GeneralImage)g;
 }
 
-/// Decode a string as a fraction. Accept also value AUTO (=-1).
-bool GetFraction(const std::string& s, int& numerator, int& denominator) {
-    if(s=="AUTO")     { numerator = -1;       denominator = 1; return true; }
-    if(std::sscanf(s.c_str(), "%d/%d", &numerator, &denominator) != 2) {
-        if(std::sscanf(s.c_str(), "%d", &numerator) == 1)
-            denominator = 1;
+/// Store in \a params fractions approximating the last 3 parameters.
+///
+/// They have the same denominator (up to \c MAX_DENOM), chosen so that the sum
+/// of relative errors is minimized.
+void set_fractions(Match::Parameters& params,
+                   float K, float lambda1, float lambda2) {
+    float minError = std::numeric_limits<float>::max();
+    for(int i=1; i<=MAX_DENOM; i++) {
+        float e = 0;
+        int numK=0, num1=0, num2=0;
+        if(K>0)
+            e += std::abs((numK=int(i*K+.5f))/(i*K) - 1.0f);
+        if(lambda1>0)
+            e += std::abs((num1=int(i*lambda1+.5f))/(i*lambda1) - 1.0f);
+        if(lambda2>0)
+            e += std::abs((num2=int(i*lambda2+.5f))/(i*lambda2) - 1.0f);
+        if(e<minError) {
+            minError = e;
+            params.denominator = i;
+            params.K = numK;
+            params.lambda1 = num1;
+            params.lambda2 = num2;
+        }
     }
-    bool ok = (numerator>=0 && denominator>=1);
-    if(! ok)
-        std::cerr << "Unable to decode " << s << " as fraction" << std::endl;
-    return ok;
-}
-
-/// Multiply lambda, lambda, lambda1, lambda2, K, denominator by denom.
-void multLambdaK(int& lambda, int denom[5], Match::Parameters& params) {
-    lambda             *= denom[0];
-    params.lambda1     *= denom[1];
-    params.lambda2     *= denom[2];
-    params.K           *= denom[3];
-    params.denominator *= denom[4];
-}
-
-/// Set lambda to value lambda/denom. As we have to keep as int, we need to
-/// modify the overall params.denominator in consequence.
-void setLambda(int& lambda, int denom, Match::Parameters& params) {
-    int mult[] = {params.denominator,denom,denom,denom,denom};
-    multLambdaK(lambda, mult, params);
-}
-
-/// Set lambda1 to value lambda1/denom. See setLambda for explanation.
-void setLambda1(int& lambda, int denom, Match::Parameters& params) {
-    int mult[] = {denom,params.denominator,denom,denom,denom};
-    multLambdaK(lambda, mult, params);
-}
-
-/// Set lambda2 to value lambda2/denom. See setLambda for explanation.
-void setLambda2(int& lambda, int denom, Match::Parameters& params) {
-    int mult[] = {denom,denom,params.denominator,denom,denom};
-    multLambdaK(lambda, mult, params);
-}
-
-/// Set params.K to value params.K/denom. See setLambda for explanation.
-void setK(int& lambda, int denom, Match::Parameters& params) {
-    int mult[] = {denom,denom,denom,params.denominator,denom};
-    multLambdaK(lambda, mult, params);
-}
-
-/// GCD of integers
-int gcd(int a, int b) {
-    if(b == 0) return a;
-    int r = a % b;
-    return gcd(b, r);
 }
 
 /// Make sure parameters K, lambda1 and lambda2 are non-negative.
@@ -101,47 +82,25 @@ int gcd(int a, int b) {
 /// - K may be computed automatically and lambda set to K/5.
 /// - lambda1=3*lambda, lambda2=lambda
 /// As the graph requires integer weights, use fractions and common denominator.
-/// Return the denominator of lambda.
-int fix_parameters(Match& m, Match::Parameters& params, int& lambda) {
+void fix_parameters(Match& m, Match::Parameters& params,
+                    float& K, float& lambda, float& lambda1, float& lambda2) {
     if(lambda<0) { // Set lambda to K/5
-        float K = params.K/(float)params.denominator;
-        if(params.K<=0) { // Automatic computation of K
+        if(K<0) { // Automatic computation of K
             m.SetParameters(&params);
             K = m.GetK();
         }
-        K /= 5; int denom = 1;
-        while(K < 3) { K *= 2; denom *= 2; }
-        lambda = int(K+0.5f);
-        setLambda(lambda, denom, params);
+        lambda = K/5;
     }
-    if(params.K<0) params.K = 5*lambda;
-    if(params.lambda1<0) params.lambda1 = 3*lambda;
-    if(params.lambda2<0) params.lambda2 = lambda;
-    int denom = gcd(params.K,
-                    gcd(params.lambda1,
-                            gcd(params.lambda2,
-                                params.denominator)));
-    int denomLambda = params.denominator;
-    if(denom>1) { // Reduce fractions to minimize risk of overflow
-        denomLambda = denom;
-        params.K /= denom;
-        params.lambda1 /= denom;
-        params.lambda2 /= denom;
-        params.denominator /= denom;
-    }
+    if(K<0) K = 5*lambda;
+    if(lambda1<0) lambda1 = 3*lambda;
+    if(lambda2<0) lambda2 = lambda;
+    set_fractions(params, K, lambda1, lambda2);
     m.SetParameters(&params);
-    // Reduce fraction lambda/denomLambda
-    denom = gcd(lambda, denomLambda);
-    if(denom>1) {
-        lambda /= denom;
-        denomLambda /= denom;
-    }
-    return denomLambda;
 }
 
+/// Main program
 int main(int argc, char *argv[]) {
-    // Default parameters
-    Match::Parameters params = {
+    Match::Parameters params = { // Default parameters
         Match::Parameters::L2, 1, // dataCost, denominator
         8, -1, -1, // edgeThresh, lambda1, lambda2 (smoothness cost)
         -1,        // K (occlusion cost)
@@ -149,16 +108,17 @@ int main(int argc, char *argv[]) {
     };
 
     CmdLine cmd;
-    std::string cost, slambda, slambda1, slambda2, sK, sDisp;
+    std::string cost, sDisp;
+    float K=-1, lambda=-1, lambda1=-1, lambda2=-1;
     cmd.add( make_option('i', params.maxIter, "max_iter") );
     cmd.add( make_option('o', sDisp, "output") );
     cmd.add( make_switch('r', "random") );
     cmd.add( make_option('c', cost, "data_cost") );
-    cmd.add( make_option('l', slambda, "lambda") );
-    cmd.add( make_option(0, slambda1, "lambda1") );
-    cmd.add( make_option(0, slambda2, "lambda2") );
+    cmd.add( make_option('k', K) );
+    cmd.add( make_option('l', lambda, "lambda") );
+    cmd.add( make_option(0, lambda1, "lambda1") );
+    cmd.add( make_option(0, lambda2, "lambda2") );
     cmd.add( make_option('t', params.edgeThresh, "threshold") );
-    cmd.add( make_option('k', sK) );
 
     cmd.process(argc, argv);
     if(argc != 5 && argc != 6) {
@@ -166,7 +126,7 @@ int main(int argc, char *argv[]) {
                   << "im1.png im2.png dMin dMax [dispMap.tif]" << std::endl;
         std::cerr << "General options:" << '\n'
                   << " -i,--max_iter iter: max number of iterations" <<'\n'
-                  << " -o,--output disp.png: scaled disparity map" <<std::endl
+                  << " -o,--output disp.png: scaled disparity map" <<'\n'
                   << " -r,--random: random alpha order at each iteration" <<'\n'
                   << "Options for cost:" <<'\n'
                   << " -c,--data_cost dist: L1 or L2" <<'\n'
@@ -190,36 +150,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int lambda=-1;
-    if(! slambda.empty()) {
-        int denom;
-        if(! GetFraction(slambda, lambda, denom)) return 1;
-        setLambda(lambda, denom, params);
-    }
-    if(! slambda1.empty()) {
-        int denom;
-        if(! GetFraction(slambda1, params.lambda1, denom)) return 1;
-        setLambda1(lambda, denom, params);
-    }
-    if(! slambda2.empty()) {
-        int denom;
-        if(! GetFraction(slambda2, params.lambda2, denom)) return 1;
-        setLambda2(lambda, denom, params);
-    }
-    if(! sK.empty()) {
-        int denom;
-        if(! GetFraction(sK, params.K, denom)) return 1;
-        setK(lambda, denom, params);
-    }
-
     GeneralImage im1 = (GeneralImage)imLoad(IMAGE_RGB, argv[1]);
     GeneralImage im2 = (GeneralImage)imLoad(IMAGE_RGB, argv[2]);
-    if(! im1) {
-        std::cerr << "Unable to read image " << argv[1] << std::endl;
-        return 1;
-    }
-    if(! im2) {
-        std::cerr << "Unable to read image " << argv[2] << std::endl;
+    if(!im1 || !im2) {
+        std::cerr << "Unable to read image " << argv[im1?2:1] << std::endl;
         return 1;
     }
     bool color=true;
@@ -231,18 +165,18 @@ int main(int argc, char *argv[]) {
     Match m(im1, im2, color);
 
     // Disparity
-    int disp_base=0, disp_max=0;
+    int dMin=0, dMax=0;
     std::istringstream f(argv[3]), g(argv[4]);
-    if(! ((f>>disp_base).eof() && (g>>disp_max).eof())) {
+    if(! ((f>>dMin).eof() && (g>>dMax).eof())) {
         std::cerr << "Error reading dMin or dMax" << std::endl;
         return 1;
     }
-    m.SetDispRange(disp_base, disp_max);
+    m.SetDispRange(dMin, dMax);
 
     time_t seed = time(NULL);
     srand((unsigned int)seed);
 
-    int denomLambda = fix_parameters(m, params, lambda);
+    fix_parameters(m, params, K, lambda, lambda1, lambda2);
     if(argc>5 || !sDisp.empty()) {
         m.KZ2();
         if(argc>5)
@@ -250,12 +184,8 @@ int main(int argc, char *argv[]) {
         if(! sDisp.empty())
             m.SaveScaledXLeft(sDisp.c_str(), false);
     } else {
-        std::cout << "K=" << params.K;
-        if(params.denominator!=1) std::cout << "/" << params.denominator;
-        std::cout << std::endl;
-        std::cout << "lambda=" << lambda;
-        if(denomLambda!=1) std::cout << "/" << denomLambda;
-        std::cout << std::endl;
+        std::cout << "K=" << K << std::endl;
+        std::cout << "lambda=" << lambda << std::endl;
     }
 
     imFree(im1);

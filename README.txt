@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0-rc5 released on 2014/05/30
+Version 1.0-rc6 released on 2014/06/21
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -63,7 +63,7 @@ If no output is given (neither dispMap.tif nor -o option), the program just disp
 
 Files
 -----
-Only files with (*) are reviewed.
+Only files with (*) are reviewed in the IPOL publication.
 README.txt
 CMakeLists.txt
 images/scene_l.png
