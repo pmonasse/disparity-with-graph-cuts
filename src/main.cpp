@@ -84,14 +84,12 @@ void set_fractions(Match::Parameters& params,
 /// As the graph requires integer weights, use fractions and common denominator.
 void fix_parameters(Match& m, Match::Parameters& params,
                     float& K, float& lambda, float& lambda1, float& lambda2) {
-    if(lambda<0) { // Set lambda to K/5
-        if(K<0) { // Automatic computation of K
-            m.SetParameters(&params);
-            K = m.GetK();
-        }
-        lambda = K/5;
+    if(K<0) { // Automatic computation of K
+        m.SetParameters(&params);
+        K = m.GetK();
     }
-    if(K<0) K = 5*lambda;
+    if(lambda<0) // Set lambda to K/5
+        lambda = K/5;
     if(lambda1<0) lambda1 = 3*lambda;
     if(lambda2<0) lambda2 = lambda;
     set_fractions(params, K, lambda1, lambda2);

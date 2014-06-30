@@ -2,7 +2,7 @@ KZ2 - Kolmogorov and Zabih’s graph cuts stereo matching algorithm
 by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 and Pascal Monasse <monasse@imagine.enpc.fr>
 
-This software is linked to the IPOL article [1], which gives a detailed description of the algorithm. The algorithm was first published in [2]. The source code is an extensively edited version of [3] by Pascal Monasse and is distributed under the terms of the GPLv3 license. The max-flow algorithm was described in [4].
+This software is linked to the IPOL article [1], which gives a detailed description of the algorithm. The algorithm was first published in [2]. The source code is an extensively edited version of [3] by Pascal Monasse and is distributed under the terms of the GPLv3 license. The max-flow algorithm is described in [4].
 
 [1] "Kolmogorov and Zabih’s Graph Cuts Stereo Matching Algorithm"
 by Vladimir Kolmogorov, Pascal Monasse, Pauline Tan (2014)
@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0-rc6 released on 2014/06/21
+Version 1.0-rc7 released on 2014/06/30
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -44,6 +44,7 @@ Input images must be epipolar rectified, the disparity range depends on the pair
 - disp.tif (float TIFF image, able to contain negative values and with occluded pixels as NaN, Not A Number) and
 - disp.png, representing the same image directly viewable, with gray levels for disparity and cyan color for occluded pixels.
 The latter is useful as most image viewers do not understand float TIFF.
+The file disp.png should be similar to the one in folder ../images but may be slightly different, due to the random order of alpha.
 
 Usage
 -----
