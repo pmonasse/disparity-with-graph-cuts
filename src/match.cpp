@@ -18,6 +18,7 @@
 
 #include "match.h"
 #include "nan.h"
+#include <algorithm>
 #include <limits>
 #include <iostream>
 
