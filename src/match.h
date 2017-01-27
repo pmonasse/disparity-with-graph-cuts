@@ -97,8 +97,7 @@ private:
     // Graph construction
     void build_nodes        (Energy& e, Coord p, int a);
     void build_smoothness   (Energy& e, Coord p, Coord np, int a);
-    void build_uniqueness_LR(Energy& e, Coord p);
-    void build_uniqueness_RL(Energy& e, Coord p, int a);
+    void build_uniqueness(Energy& e, Coord p, int a);
     void update_disparity(const Energy& e, int a);
 };
 

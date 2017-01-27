@@ -136,30 +136,27 @@ void Match::build_smoothness(Energy& e, Coord p1, Coord p2, int a) {
         e.add_term1(o2, smoothness_penalty(p1,p2,d2), 0);
 }
 
-/// Build edges in graph enforcing uniqueness at pixel p.
-/// Prevent (p,p+d) and (p,p+a) from being both active.
-void Match::build_uniqueness_LR(Energy& e, Coord p) {
+/// Build edges in graph enforcing uniqueness at pixels p and p+d:
+/// - Prevent (p,p+d) and (p,p+a) from being both active.
+/// - Prevent (p,p+d) and (p+d-alpha,p+d) from being both active.
+void Match::build_uniqueness(Energy& e, Coord p, int alpha) {
     Energy::Var o = (Energy::Var) IMREF(vars0, p);
+    if(! IS_VAR(o))
+        return;
+
+    // Enfore unique image of p
     Energy::Var a = (Energy::Var) IMREF(varsA, p);
-
-    if(IS_VAR(o) && a!=VAR_ABSENT)
+    if(a!=VAR_ABSENT)
         e.forbid01(o,a);
-}
 
-/// Build edges in graph enforcing uniqueness at pixel q.
-/// Prevent (q-d,q) and (q-alpha,q) from being both active.
-void Match::build_uniqueness_RL(Energy& e, Coord q, int alpha) {
-    int minusd = IMREF(d_right, q);
-    if(minusd==OCCLUDED) return;
-    Energy::Var o = (Energy::Var) IMREF(vars0, q+minusd);
-    assert(o!=VAR_ABSENT); // since d_right is inverse of d_left
-    if(o!=VAR_ALPHA) {
-        Coord p = q-alpha;
-        if(inRect(p,imSizeL)) {
-            Energy::Var a = (Energy::Var) IMREF(varsA, p);
-            assert(IS_VAR(a)); // not active because of current uniqueness
-            e.forbid01(o, a);
-        }
+    // Enforce unique antecedent at p+d
+    int d = IMREF(d_left, p);
+    assert(d!=OCCLUDED);
+    p = p+(d-alpha);
+    if(inRect(p,imSizeL)) {
+        a = (Energy::Var) IMREF(varsA, p);
+        assert(IS_VAR(a)); // not active because of current uniqueness
+        e.forbid01(o, a);
     }
 }
 
@@ -187,7 +184,7 @@ bool Match::ExpansionMove(int a) {
     Energy e(2*imSizeL.x*imSizeL.y, 12*imSizeL.x*imSizeL.y);
 
     // Build graph
-    RectIterator endL=rectEnd(imSizeL), endR=rectEnd(imSizeR);
+    RectIterator endL=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
         build_nodes(e, *p, a);
 
@@ -199,9 +196,7 @@ bool Match::ExpansionMove(int a) {
         }
 
     for(RectIterator p=rectBegin(imSizeL); p!=endL; ++p)
-        build_uniqueness_LR(e, *p);
-    for(RectIterator q=rectBegin(imSizeR); q!=endR; ++q)
-        build_uniqueness_RL(e, *q, a);
+        build_uniqueness(e, *p, a);
 
     int oldE=E;
     E = e.minimize(); // Max-flow, give the lowest-energy expansion move
