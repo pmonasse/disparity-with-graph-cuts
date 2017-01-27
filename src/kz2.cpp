@@ -149,7 +149,7 @@ void Match::build_uniqueness(Energy& e, Coord p, int alpha) {
     if(a!=VAR_ABSENT)
         e.forbid01(o,a);
 
-    // Enforce unique antecedent at p+d
+    // Enforce unique antecedent of p+d
     int d = IMREF(d_left, p);
     assert(d!=OCCLUDED);
     p = p+(d-alpha);
@@ -161,18 +161,17 @@ void Match::build_uniqueness(Energy& e, Coord p, int alpha) {
 }
 
 /// Update the disparity map according to min cut of energy.
-/// We need to set d_right for smoothness term in next expansion move.
 void Match::update_disparity(const Energy& e, int alpha) {
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
         Energy::Var o = (Energy::Var) IMREF(vars0,*p);
         if(IS_VAR(o) && e.get_var(o)==1)
-            IMREF(d_left,*p) = IMREF(d_right,*p+IMREF(d_left,*p)) = OCCLUDED;
+            IMREF(d_left,*p) = OCCLUDED;
     }
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p) {
         Energy::Var a = (Energy::Var) IMREF(varsA,*p);
         if(IS_VAR(a) && e.get_var(a)==1) // New disparity
-            IMREF(d_right,*p+alpha) = -(IMREF(d_left,*p) = alpha);
+            IMREF(d_left,*p) = alpha;
     }
 }
 

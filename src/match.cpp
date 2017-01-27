@@ -53,11 +53,9 @@ Match::Match(GeneralImage left, GeneralImage right, bool color) {
     dispMin = dispMax = 0;
 
     d_left  = (IntImage)imNew(IMAGE_INT, imSizeL);
-    d_right = (IntImage)imNew(IMAGE_INT, imSizeR);
-
     vars0 = (IntImage)imNew(IMAGE_INT, imSizeL);
     varsA = (IntImage)imNew(IMAGE_INT, imSizeL);
-    if (!d_left || !d_right || !vars0 || !varsA)
+    if (!d_left || !vars0 || !varsA)
         { std::cerr << "Not enough memory!" << std::endl; exit(1); }
 }
 
@@ -73,7 +71,6 @@ Match::~Match() {
     imFree(imColorRightMax);
 
     imFree(d_left);
-    imFree(d_right);
 
     imFree(vars0);
     imFree(varsA);
@@ -139,7 +136,4 @@ void Match::SetDispRange(int dMin, int dMax) {
     RectIterator end=rectEnd(imSizeL);
     for(RectIterator p=rectBegin(imSizeL); p!=end; ++p)
         IMREF(d_left, *p) = OCCLUDED;
-    end = rectEnd(imSizeR);
-    for(RectIterator q=rectBegin(imSizeR); q!=end; ++q)
-        IMREF(d_right,*q) = OCCLUDED;
 }

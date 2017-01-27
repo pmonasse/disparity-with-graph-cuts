@@ -68,9 +68,8 @@ private:
 
     static const int OCCLUDED; ///< Special value of disparity meaning occlusion
     /// If (p,q) is an active assignment
-    /// q == p + Coord(IMREF(d_left,  p), p.y)
-    /// p == q + Coord(IMREF(d_right, q), q.y)
-    IntImage  d_left, d_right;
+    /// q == Coord(p.x+IMREF(d_left,p), p.y)
+    IntImage  d_left;
     Parameters  params; ///< Set of parameters
 
     int E; ///< Current energy
