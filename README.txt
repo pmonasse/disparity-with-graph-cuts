@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.0 released on 2014/10/10
+Version 1.1 released on 2014/01/28
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
@@ -97,3 +97,8 @@ The software is a bit slower (10-20%) than the original code Match of V. Kolmogo
 - Match has faster max-flow computation since it uses pointers to follow paths while KZ2 uses index in std::vector.
 - It was noticed that with the same allocation policy, using C's alloc/realloc is faster than standard allocator of std::vector using C++'s new. The reason is a mystery since elements have no constructor/destructor.
 To alleviate the latter defect, a preset amount of memory is pre-allocated for node and edge arrays: 2n nodes and 12n edges, with n the number of pixels (see Match::ExpansionMove in kz2.cpp). These are the maximum possible values, but this pre-allocation is less elegant and less efficient than on-demand allocation.
+
+Changes
+-------
+- 1.0: initial release.
+- 1.1: remove d_right, upgrade third parties
