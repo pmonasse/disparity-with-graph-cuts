@@ -17,7 +17,7 @@ software written by Vladimir Kolmogorov <vnk@cs.cornell.edu>
 by Yuri Boykov and Vladimir Kolmogorov (2004)
     IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI)
 
-Version 1.1 released on 2014/01/28
+Version 1.1 released on 2017/01/28
 
 Future releases and updates:
 https://github.com/pmonasse/disparity-with-graph-cuts.git
