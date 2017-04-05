@@ -186,7 +186,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 if(NOT AWK)
   # No awk available to generate sources; use pre-built pnglibconf.h
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt
-                 ${CMAKE_CURRENT_SOURCE_DIR}/pnglibconf.h)
+                 ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h)
   add_custom_target(genfiles) # Dummy
 else()
   include(CMakeParseArguments)
@@ -253,12 +253,6 @@ else()
                                -P "${CMAKE_CURRENT_BINARY_DIR}/scripts/gensrc.cmake"
                        DEPENDS ${_GSO_DEPENDS}
                        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    # add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${_GSO_OUTPUT}"
-    #                    COMMAND "${CMAKE_COMMAND}"
-    #                            "-DOUTPUT=${CMAKE_CURRENT_SOURCE_DIR}/${_GSO_OUTPUT}"
-    #                            -P "${CMAKE_CURRENT_BINARY_DIR}/scripts/gensrc.cmake"
-    #                    DEPENDS ${_GSO_DEPENDS}
-    #                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
   endfunction()
 
   # Copy file
@@ -374,7 +368,7 @@ endif(NOT AWK)
 set(libpng_public_hdrs
   png.h
   pngconf.h
-  "${CMAKE_CURRENT_SOURCE_DIR}/pnglibconf.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h"
 )
 set(libpng_private_hdrs
   pngpriv.h
@@ -383,7 +377,7 @@ set(libpng_private_hdrs
   pngstruct.h
 )
 if(AWK)
-  list(APPEND libpng_private_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/pngprefix.h")
+  list(APPEND libpng_private_hdrs "${CMAKE_CURRENT_BINARY_DIR}/pngprefix.h")
 endif()
 set(libpng_sources
   ${libpng_public_hdrs}
@@ -436,7 +430,7 @@ if(PNG_DEBUG)
 endif()
 
 # NOW BUILD OUR TARGET
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ZLIB_INCLUDE_DIRS})
 
 unset(PNG_LIB_TARGETS)
 
@@ -847,5 +841,5 @@ endif()
 # pexports libpng.dll > libpng.def
 # lib /def:libpng.def /machine:x86
 
-set(PNG_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+set(PNG_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 set(PNG_LIBRARIES ${PNG_LIB_NAME_STATIC} ${ZLIB_LIBRARIES} PARENT_SCOPE)
