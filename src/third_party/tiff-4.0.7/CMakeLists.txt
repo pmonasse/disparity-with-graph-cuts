@@ -25,9 +25,6 @@
 
 cmake_minimum_required(VERSION 2.8.9)
 
-set(TIFF_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libtiff PARENT_SCOPE)
-set(TIFF_LIBRARIES tiff ${JPEG_LIBRARIES} PARENT_SCOPE)
-
 # Default policy is from 2.8.9
 cmake_policy(VERSION 2.8.9)
 # Set MacOSX @rpath usage globally.
@@ -765,3 +762,7 @@ message(STATUS "")
 # message(STATUS "  X Athena Widgets support:           ${HAVE_XAW}")
 message(STATUS "  OpenGL support:                     ${HAVE_OPENGL}")
 message(STATUS "")
+
+
+set(TIFF_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libtiff ${LIBTIFF_INCLUDE} PARENT_SCOPE)
+set(TIFF_LIBRARIES tiff ${JPEG_LIBRARIES} PARENT_SCOPE)

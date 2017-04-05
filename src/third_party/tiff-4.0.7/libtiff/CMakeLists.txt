@@ -27,7 +27,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in
                ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h
                @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in
-               ${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h
+               ${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h
                @ONLY)
 
 # extra_dist(
@@ -54,7 +54,7 @@ set(tiff_noinst_HEADERS
   uvcode.h)
 
 set(nodist_tiff_HEADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h)
+  ${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h)
 
 set(tiff_SOURCES
   tif_aux.c
@@ -163,3 +163,6 @@ if(cxx)
           DESTINATION "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 
 endif()
+
+
+set(LIBTIFF_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
