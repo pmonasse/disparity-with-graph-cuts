@@ -177,7 +177,7 @@ int Match::smoothness_penalty_gray(Coord p1, Coord p2, int disp) const {
     // |I1(p1)-I1(p2)| and |I2(p1+disp)-I2(p2+disp)|
     int dl = IMREF(imLeft,  p1     ) - IMREF(imLeft,  p2     );
     int dr = IMREF(imRight, p1+disp) - IMREF(imRight, p2+disp);
-    if (dl<0) dl = -dl; if (dr<0) dr = -dr;
+    if (dl<0) {dl = -dl;} if (dr<0) {dr = -dr;}
     return (dl<params.edgeThresh && dr<params.edgeThresh)?
         params.lambda1: params.lambda2;
 }
@@ -187,9 +187,9 @@ int Match::smoothness_penalty_color(Coord p1, Coord p2, int disp) const {
     int d, dMax=0; // Max inf norm in RGB space of (p1,p2) and (p1+disp,p2+disp)
     for(int i=0; i<3; i++) {
         d = IMREF(imColorLeft,  p1     ).c[i]-IMREF(imColorLeft,  p2     ).c[i];
-        if(d<0) d = -d; if (dMax<d) dMax = d;
+        if(d<0) {d = -d;} if (dMax<d) {dMax = d;}
         d = IMREF(imColorRight, p1+disp).c[i]-IMREF(imColorRight, p2+disp).c[i];
-        if(d<0) d = -d; if (dMax<d) dMax = d;
+        if(d<0) {d = -d;} if (dMax<d) {dMax = d;}
     }
     return (dMax<params.edgeThresh)? params.lambda1: params.lambda2;
 }

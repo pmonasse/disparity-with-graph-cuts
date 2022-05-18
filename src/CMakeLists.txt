@@ -45,9 +45,9 @@ TARGET_LINK_LIBRARIES(KZ2 ${TIFF_LIBRARIES} ${PNG_LIBRARIES})
 
 IF(UNIX)
     SET_SOURCE_FILES_PROPERTIES(${SRC} PROPERTIES
-                                COMPILE_FLAGS "-Wall -Wextra -Werror -std=c++98")
+                                COMPILE_FLAGS "-Wall -Wextra -std=c++98")
     SET_SOURCE_FILES_PROPERTIES(${SRC_C} PROPERTIES
-                                COMPILE_FLAGS "-Wall -Wextra -Werror -std=c89")
+                                COMPILE_FLAGS "-Wall -Wextra -std=c89")
 ENDIF(UNIX)
 IF(MSVC)
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
