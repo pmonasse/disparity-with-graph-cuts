@@ -1,7 +1,7 @@
-SET(SRC_C io_tiff.c io_tiff.h
+set(SRC_C io_tiff.c io_tiff.h
           io_png.c io_png.h)
  
-SET(SRC cmdLine.h
+set(SRC cmdLine.h
         data.cpp
         image.cpp image.h
         kz2.cpp
@@ -9,46 +9,53 @@ SET(SRC cmdLine.h
         match.cpp match.h
         nan.h
         statistics.cpp)
-SET(SRC_ENERGY energy/energy.h)
-SET(SRC_MAXFLOW maxflow/graph.cpp maxflow/graph.h
+set(SRC_ENERGY energy/energy.h)
+set(SRC_MAXFLOW maxflow/graph.cpp maxflow/graph.h
                 maxflow/maxflow.cpp)
 
-FIND_PACKAGE(PNG)
-FIND_PACKAGE(TIFF)
+find_package(PNG)
+find_package(TIFF)
 
-IF(NOT PNG_FOUND)
-    FIND_PACKAGE(ZLIB)
-    IF(NOT ZLIB_FOUND)
-        ADD_SUBDIRECTORY(third_party/zlib-1.2.11)
-    ENDIF(NOT ZLIB_FOUND)
-    INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
-    ADD_SUBDIRECTORY(third_party/libpng-1.6.29)
-ENDIF(NOT PNG_FOUND)
-INCLUDE_DIRECTORIES(${PNG_INCLUDE_DIRS})
+if(NOT PNG_FOUND OR NOT TIFF_FOUND)
+    find_package(ZLIB) # zlib is needed by libPNG and by libTIFF
+    if(NOT ZLIB_FOUND)
+        add_subdirectory(third_party/zlib-1.2.13)
+        set(ZLIB_FOUND TRUE)
+    endif()
+    include_directories(${ZLIB_INCLUDE_DIRS})
 
-IF(NOT TIFF_FOUND)
-    FIND_PACKAGE(JPEG)
-    IF(NOT JPEG_FOUND)
-        ADD_SUBDIRECTORY(third_party/jpeg-9b)
-    ENDIF(NOT JPEG_FOUND)
-    INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
-    ADD_SUBDIRECTORY(third_party/tiff-4.0.7)
-ENDIF(NOT TIFF_FOUND)
-INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
+    if(NOT PNG_FOUND)
+        set(SKIP_INSTALL_ALL 1)
+        add_subdirectory(third_party/libpng-1.6.39)
+    endif()
 
-ADD_DEFINITIONS(${PNG_DEFINITIONS} -DHAS_PNG)
-ADD_DEFINITIONS(${TIFF_DEFINITIONS} -DHAS_TIFF)
+    if(NOT TIFF_FOUND)
+        find_package(JPEG)
+        if(NOT JPEG_FOUND)
+            add_subdirectory(third_party/jpeg-9e)
+            set(JPEG_FOUND TRUE)
+        endif()
+        include_directories(${JPEG_INCLUDE_DIR})
+        add_subdirectory(third_party/tiff-4.0.10)
+    endif()
+endif()
 
-ADD_EXECUTABLE(KZ2 ${SRC} ${SRC_ENERGY} ${SRC_MAXFLOW} ${SRC_C})
-INCLUDE_DIRECTORIES(energy maxflow)
-TARGET_LINK_LIBRARIES(KZ2 ${TIFF_LIBRARIES} ${PNG_LIBRARIES})
+include_directories(${PNG_INCLUDE_DIRS})
+include_directories(${TIFF_INCLUDE_DIR})
 
-IF(UNIX)
-    SET_SOURCE_FILES_PROPERTIES(${SRC} PROPERTIES
+add_definitions(${PNG_DEFINITIONS} -DHAS_PNG)
+add_definitions(${TIFF_DEFINITIONS} -DHAS_TIFF)
+
+add_executable(KZ2 ${SRC} ${SRC_ENERGY} ${SRC_MAXFLOW} ${SRC_C})
+include_directories(energy maxflow)
+target_link_libraries(KZ2 ${TIFF_LIBRARIES} ${PNG_LIBRARIES})
+
+if(UNIX)
+    set_source_files_properties(${SRC} PROPERTIES
                                 COMPILE_FLAGS "-Wall -Wextra -std=c++98")
-    SET_SOURCE_FILES_PROPERTIES(${SRC_C} PROPERTIES
+    set_source_files_properties(${SRC_C} PROPERTIES
                                 COMPILE_FLAGS "-Wall -Wextra -std=c89")
-ENDIF(UNIX)
-IF(MSVC)
-    ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
-ENDIF(MSVC)
+endif()
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+endif()

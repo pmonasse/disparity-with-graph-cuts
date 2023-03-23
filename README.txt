@@ -102,3 +102,4 @@ Changes
 -------
 - 1.0: initial release.
 - 1.1: remove d_right, upgrade third parties
+- 1.2: upgrade third party libraries
